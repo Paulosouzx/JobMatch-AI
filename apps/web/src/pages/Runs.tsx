@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Alert, Card, Spinner } from '../components/ui';
+import { Alert, Card, Spinner } from '../components/legacy-ui';
 import { supabase } from '../lib/supabase';
 import { useAsync } from '../lib/useAsync';
 

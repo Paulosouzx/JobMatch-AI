@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { promptInstall, useInstallState } from '../lib/install';
-import { Alert, Button, Card } from './ui';
+import { Alert, Button, Card } from './legacy-ui';
 
 export function InstallAppCard() {
   const { t } = useTranslation();

@@ -82,7 +82,7 @@ export function AuthLayout({
     <div className="min-h-screen bg-deep lg:grid lg:grid-cols-2 lg:gap-4 lg:bg-white lg:p-4 dark:lg:bg-slate-950">
       <div className="flex min-h-screen flex-col lg:min-h-0 lg:items-center lg:justify-center lg:px-10 lg:py-10">
         <div className="relative overflow-hidden px-6 pt-6 pb-10 lg:hidden">
-          <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-accent/40 blur-3xl" />
+          <div className="absolute -top-20 -right-20 h-64 w-64 rounded-full bg-highlight/40 blur-3xl" />
           <Link
             to="/"
             aria-label={t('common.back')}

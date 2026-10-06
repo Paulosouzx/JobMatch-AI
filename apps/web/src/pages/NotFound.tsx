@@ -16,7 +16,7 @@ export default function NotFound() {
       </header>
       <main className="flex flex-1 items-center justify-center px-4 pb-20">
         <div className="relative w-full max-w-xl overflow-hidden rounded-[2rem] bg-deep px-6 py-14 text-center sm:px-12">
-          <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-accent/40 blur-3xl" />
+          <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-highlight/40 blur-3xl" />
           <div className="absolute -bottom-20 -left-20 h-56 w-56 rotate-12 rounded-[3rem] border border-white/10" />
           <div className="relative">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 text-brand-300 ring-1 ring-white/15">

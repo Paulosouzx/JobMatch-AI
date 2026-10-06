@@ -2,7 +2,16 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { InstallAppCard } from '../components/InstallAppCard';
 import { PushSettings } from '../components/PushSettings';
-import { Alert, Button, Card, Field, Input, Select, Spinner, Textarea } from '../components/ui';
+import {
+  Alert,
+  Button,
+  Card,
+  Field,
+  Input,
+  Select,
+  Spinner,
+  Textarea,
+} from '../components/legacy-ui';
 import { useAuth } from '../lib/auth';
 import { formatList, parseList } from '../lib/lists';
 import { supabase } from '../lib/supabase';

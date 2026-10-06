@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { useTheme } from '../lib/theme';
-import { ThemeToggle } from './ui';
+import { ThemeToggle } from './legacy-ui';
 
 const LINKS = [
   { to: '/app', key: 'nav.jobs', end: true },

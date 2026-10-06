@@ -165,7 +165,7 @@ export function QuoteCard({
     <div
       className={`${className} rounded-2xl bg-white p-4 shadow-xl shadow-brand-950/10 ring-1 ring-slate-900/5`}
     >
-      <Quote className="h-5 w-5 text-accent" strokeWidth={1.75} />
+      <Quote className="h-5 w-5 text-highlight" strokeWidth={1.75} />
       <p className="mt-2 text-xs leading-relaxed text-slate-700">{text}</p>
       <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
         <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-brand-700">

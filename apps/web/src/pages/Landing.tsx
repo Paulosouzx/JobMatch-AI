@@ -26,7 +26,7 @@ import {
   QuoteCard,
   ScoreRing,
 } from '../components/marketing/Mockups';
-import { ThemeToggle } from '../components/ui';
+import { ThemeToggle } from '../components/legacy-ui';
 import { useAuth } from '../lib/auth';
 import { config } from '../lib/config';
 import { useTheme } from '../lib/theme';
@@ -131,7 +131,7 @@ export default function Landing() {
 
           <div className="relative mt-10 overflow-hidden rounded-[2rem] bg-deep dark:ring-1 dark:ring-white/10">
             <div className="absolute right-0 bottom-0 hidden h-3/4 w-1/2 rounded-tl-[2.5rem] bg-brand-600 lg:block" />
-            <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-accent/40 blur-3xl" />
+            <div className="absolute -top-24 -right-24 h-72 w-72 rounded-full bg-highlight/40 blur-3xl" />
             <div className="relative grid gap-10 p-6 sm:p-10 lg:grid-cols-2 lg:p-12">
               <div className="flex flex-col justify-between gap-10">
                 <div>
@@ -354,7 +354,7 @@ export default function Landing() {
 
         <section id="self-hosting" className="mx-auto max-w-6xl scroll-mt-24 px-4 pb-20">
           <div className="relative overflow-hidden rounded-[2rem] bg-deep px-6 py-14 text-center sm:px-12 dark:ring-1 dark:ring-white/10">
-            <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-accent/40 blur-3xl" />
+            <div className="absolute -bottom-24 -left-24 h-72 w-72 rounded-full bg-highlight/40 blur-3xl" />
             <div className="relative">
               <h2 className="font-display text-3xl font-semibold tracking-tight text-white sm:text-4xl">
                 {t('landing.selfHostTitle')}

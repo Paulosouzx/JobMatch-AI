@@ -2,7 +2,7 @@ import { LogOut, ShieldX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Brand } from '../components/marketing/Brand';
-import { Spinner } from '../components/ui';
+import { Spinner } from '../components/legacy-ui';
 import { useAuth } from '../lib/auth';
 import { config } from '../lib/config';
 

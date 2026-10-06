@@ -8,7 +8,7 @@ import {
   type PushState,
 } from '../lib/push';
 import { supabase } from '../lib/supabase';
-import { Alert, Button, Card } from './ui';
+import { Alert, Button, Card } from './legacy-ui';
 
 export function PushSettings() {
   const { t } = useTranslation();

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Alert, Card, Field, Input, ScoreBadge, Select, Spinner } from '../components/ui';
+import { Alert, Card, Field, Input, ScoreBadge, Select, Spinner } from '../components/legacy-ui';
 import { supabase } from '../lib/supabase';
 import { useAsync } from '../lib/useAsync';
 

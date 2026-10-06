@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
-import { Alert, Button, Card, ScoreBadge, Spinner, Textarea } from '../components/ui';
+import { Alert, Button, Card, ScoreBadge, Spinner, Textarea } from '../components/legacy-ui';
 import { supabase } from '../lib/supabase';
 import { useAsync } from '../lib/useAsync';
 

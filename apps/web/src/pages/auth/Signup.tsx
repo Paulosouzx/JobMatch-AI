@@ -11,7 +11,7 @@ import {
   PrimaryButton,
 } from '../../components/auth/AuthUI';
 import { VerifyCode } from '../../components/auth/VerifyCode';
-import { Alert } from '../../components/ui';
+import { Alert } from '../../components/legacy-ui';
 import { useAuth } from '../../lib/auth';
 import { translateAuthError } from '../../lib/auth-errors';
 import { config } from '../../lib/config';

@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Button, Card, Field, Input, Select, Spinner, Textarea } from '../components/ui';
+import {
+  Alert,
+  Button,
+  Card,
+  Field,
+  Input,
+  Select,
+  Spinner,
+  Textarea,
+} from '../components/legacy-ui';
 import { useAuth } from '../lib/auth';
 import { formatList, parseList } from '../lib/lists';
 import { extractPdfText } from '../lib/pdf';

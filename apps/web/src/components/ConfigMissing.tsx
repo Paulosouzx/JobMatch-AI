@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Alert } from './ui';
+import { Alert } from './legacy-ui';
 
 export function ConfigMissing() {
   const { t } = useTranslation();

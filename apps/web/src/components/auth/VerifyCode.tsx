@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { translateAuthError } from '../../lib/auth-errors';
 import { supabase } from '../../lib/supabase';
-import { Alert } from '../ui';
+import { Alert } from '../legacy-ui';
 import { PrimaryButton } from './AuthUI';
 
 export type CodeType = 'email' | 'signup';

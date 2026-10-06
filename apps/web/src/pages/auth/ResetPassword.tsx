@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/AuthLayout';
 import { PasswordField, PrimaryButton } from '../../components/auth/AuthUI';
-import { Alert } from '../../components/ui';
+import { Alert } from '../../components/legacy-ui';
 import { useAuth } from '../../lib/auth';
 import { translateAuthError } from '../../lib/auth-errors';
 import { supabase } from '../../lib/supabase';
