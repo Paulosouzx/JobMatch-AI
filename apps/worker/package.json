@@ -9,10 +9,12 @@
   },
   "dependencies": {
     "@jobmatch/core": "workspace:*",
-    "@supabase/supabase-js": "^2.117.2"
+    "@supabase/supabase-js": "^2.117.2",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
+    "@types/web-push": "^3.6.4",
     "tsx": "^4.23.15"
   }
 }

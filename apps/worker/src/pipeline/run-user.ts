@@ -12,7 +12,13 @@ import {
 } from '@jobmatch/core';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { WorkerEnv } from '../env';
-import { formatMatchMessage, sendTelegramMessage } from '../telegram';
+import {
+  createPushSender,
+  formatMatchNotification,
+  formatSummaryNotification,
+  type PushPayload,
+  type PushSubscriptionRow,
+} from '../push';
 import { buildCollectTasks } from './collect';
 import {
   emptyStats,
@@ -235,55 +241,94 @@ async function scoreJobs(
   if (queue.exhausted) stats.errors.push('daily LLM limit reached');
 }
 
+const MAX_INDIVIDUAL_NOTIFICATIONS = 5;
+
 async function notifyMatches(
   db: SupabaseClient,
-  env: WorkerEnv,
   userId: string,
   settings: UserSettings,
   stats: RunStats,
 ): Promise<void> {
-  const token = (await getSecret(db, userId, 'telegram')) ?? env.fallback.telegramToken;
-  const chatId = settings.telegram_chat_id ?? env.fallback.telegramChatId;
-  if (!token || !chatId) return;
+  const { data: subscriptions } = await db
+    .from('jm_push_subscriptions')
+    .select('id, endpoint, p256dh, auth')
+    .eq('user_id', userId);
+  if (!subscriptions || subscriptions.length === 0) return;
+
+  const { data: vapid, error: vapidError } = await db.rpc('jm_vapid_config').maybeSingle();
+  const config = vapid as {
+    public_key: string | null;
+    private_key: string | null;
+    subject: string;
+  } | null;
+  if (vapidError || !config?.public_key || !config.private_key) {
+    stats.errors.push('push notifications skipped: VAPID keys are not configured');
+    return;
+  }
+  const sender = createPushSender({
+    publicKey: config.public_key,
+    privateKey: config.private_key,
+    subject: config.subject,
+  });
 
   const { data, error } = await db
     .from('jm_job_matches')
-    .select('id, score, analysis, jm_jobs!inner(title, company, location, url)')
+    .select('id, score, analysis, jm_jobs!inner(title, company, location)')
     .eq('user_id', userId)
     .is('notified_at', null)
     .is('error', null)
     .gte('score', settings.min_score)
     .order('score', { ascending: false })
-    .limit(20);
+    .limit(50);
   if (error) {
     stats.errors.push(`loading notifications failed: ${error.message}`);
     return;
   }
+  const matches = data ?? [];
+  if (matches.length === 0) return;
 
-  for (const row of data ?? []) {
-    const jobRef = row.jm_jobs as unknown as {
-      title: string;
-      company: string;
-      location: string | null;
-      url: string;
-    };
-    try {
-      await sendTelegramMessage(
-        token,
-        chatId,
-        formatMatchMessage(jobRef, row.analysis as MatchScore),
-      );
-      await db
-        .from('jm_job_matches')
-        .update({ notified_at: new Date().toISOString() })
-        .eq('id', row.id);
-      stats.notified++;
-      await new Promise((resolve) => setTimeout(resolve, 1100));
-    } catch (err) {
-      stats.errors.push(errorText(err).replace(token, '***'));
-      break;
-    }
+  const payloads: PushPayload[] = matches
+    .slice(0, MAX_INDIVIDUAL_NOTIFICATIONS)
+    .map((row) =>
+      formatMatchNotification(
+        row.id,
+        row.jm_jobs as unknown as { title: string; company: string; location: string | null },
+        row.analysis as MatchScore,
+      ),
+    );
+  if (matches.length > MAX_INDIVIDUAL_NOTIFICATIONS) {
+    payloads.push(formatSummaryNotification(matches.length - MAX_INDIVIDUAL_NOTIFICATIONS));
   }
+
+  let active = subscriptions as PushSubscriptionRow[];
+  let delivered = false;
+  for (const payload of payloads) {
+    const stillActive: PushSubscriptionRow[] = [];
+    for (const subscription of active) {
+      const result = await sender.send(subscription, payload);
+      if (result === 'expired') {
+        await db.from('jm_push_subscriptions').delete().eq('id', subscription.id);
+        continue;
+      }
+      if (result === 'sent') delivered = true;
+      stillActive.push(subscription);
+    }
+    active = stillActive;
+    if (active.length === 0) break;
+  }
+
+  if (!delivered) {
+    stats.errors.push(`push delivery failed: ${sender.lastError ?? 'no active subscriptions'}`);
+    return;
+  }
+
+  const ids = matches.map((row) => row.id);
+  const { error: updateError } = await db
+    .from('jm_job_matches')
+    .update({ notified_at: new Date().toISOString() })
+    .in('id', ids);
+  if (updateError) stats.errors.push(`marking notifications failed: ${updateError.message}`);
+  stats.notified = ids.length;
 }
 
 export async function shouldRun(
@@ -328,7 +373,7 @@ export async function runUser(
 
     await collectAndStore(db, userId, settings, profile, stats);
     await scoreJobs(db, env, userId, settings, profile, stats);
-    await notifyMatches(db, env, userId, settings, stats);
+    await notifyMatches(db, userId, settings, stats);
   } catch (error) {
     stats.errors.push(errorText(error));
   }

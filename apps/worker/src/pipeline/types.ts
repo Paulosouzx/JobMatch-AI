@@ -5,7 +5,6 @@ export interface UserSettings {
   llm_provider: 'gemini' | 'groq' | 'openrouter' | 'ollama';
   llm_model: string | null;
   llm_base_url: string | null;
-  telegram_chat_id: string | null;
   adzuna_app_id: string | null;
   min_score: number;
   daily_llm_limit: number;

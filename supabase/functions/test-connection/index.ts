@@ -2,33 +2,7 @@ import { requireUser, serviceClient } from '../_shared/auth.ts';
 import { createLLMProvider } from '../_shared/core.js';
 import { json, preflight, readBody } from '../_shared/http.ts';
 import { loadLlmConfig } from '../_shared/llm-config.ts';
-
-async function testTelegram(userId: string) {
-  const db = serviceClient();
-  const { data: settings } = await db
-    .from('jm_settings')
-    .select('telegram_chat_id')
-    .eq('user_id', userId)
-    .maybeSingle();
-  const { data: token } = await db.rpc('jm_get_user_secret', {
-    p_user_id: userId,
-    p_kind: 'telegram',
-  });
-  if (!settings?.telegram_chat_id || typeof token !== 'string') {
-    return { ok: false, message: 'Telegram token or chat ID missing' };
-  }
-  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      chat_id: settings.telegram_chat_id,
-      text: 'JobMatch AI: test message. Notifications are working.',
-    }),
-  });
-  if (response.ok) return { ok: true, message: 'Test message sent' };
-  const payload = await response.json().catch(() => ({}));
-  return { ok: false, message: `Telegram error: ${payload.description ?? response.status}` };
-}
+import { sendPushToUser } from '../_shared/push.ts';
 
 Deno.serve(async (req) => {
   const early = preflight(req);
@@ -40,7 +14,19 @@ Deno.serve(async (req) => {
 
   const body = await readBody(req);
 
-  if (body.target === 'telegram') return json(await testTelegram(userId));
+  if (body.target === 'push') {
+    const result = await sendPushToUser(serviceClient(), userId, {
+      title: 'JobMatch AI',
+      body: 'Notificação de teste. Está tudo a funcionar.',
+      url: '/app/settings',
+      tag: 'jobmatch-test',
+    });
+    return json(
+      result.sent > 0
+        ? { ok: true, message: `Notificação enviada para ${result.sent} dispositivo(s).` }
+        : { ok: false, message: result.error ?? 'Falha ao enviar' },
+    );
+  }
 
   if (body.target === 'llm') {
     const loaded = await loadLlmConfig(serviceClient(), userId);

@@ -1,7 +1,7 @@
 import { requireUser, serviceClient } from '../_shared/auth.ts';
 import { json, preflight, readBody } from '../_shared/http.ts';
 
-const KINDS = ['llm', 'telegram', 'adzuna', 'itjobs'];
+const KINDS = ['llm', 'adzuna', 'itjobs'];
 
 Deno.serve(async (req) => {
   const early = preflight(req);

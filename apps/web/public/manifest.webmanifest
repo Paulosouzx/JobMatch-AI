@@ -1,0 +1,16 @@
+{
+  "name": "JobMatch AI",
+  "short_name": "JobMatch",
+  "description": "Vagas avaliadas por IA contra o teu perfil.",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#020618",
+  "theme_color": "#4f46e5",
+  "lang": "pt-BR",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

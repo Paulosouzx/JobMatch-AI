@@ -5,8 +5,6 @@ export interface WorkerEnv {
   onlyUserId: string | null;
   fallback: {
     llmApiKey: string | null;
-    telegramToken: string | null;
-    telegramChatId: string | null;
   };
 }
 
@@ -29,8 +27,6 @@ export function loadEnv(): WorkerEnv {
     onlyUserId: optional('JOBMATCH_USER_ID'),
     fallback: {
       llmApiKey: optional('LLM_API_KEY'),
-      telegramToken: optional('TELEGRAM_BOT_TOKEN'),
-      telegramChatId: optional('TELEGRAM_CHAT_ID'),
     },
   };
 }

@@ -27,7 +27,7 @@ export const ptBR = {
   landing: {
     heroTitle: 'Encontra as vagas certas sem passar o dia a procurar.',
     heroText:
-      'O JobMatch AI recolhe vagas de várias fontes, compara cada uma com o teu perfil usando um LLM e avisa-te no Telegram apenas das que valem a pena.',
+      'O JobMatch AI recolhe vagas de várias fontes, compara cada uma com o teu perfil usando um LLM e envia-te uma notificação apenas das que valem a pena.',
     login: 'Entrar',
     signup: 'Criar conta',
     dashboard: 'Ir para o dashboard',
@@ -47,7 +47,7 @@ export const ptBR = {
       },
       {
         title: 'Notifica',
-        text: 'As vagas acima da tua nota mínima chegam ao Telegram com o link direto.',
+        text: 'As vagas acima da tua nota mínima chegam como notificação no telemóvel ou computador.',
       },
     ],
     highlightsTitle: 'Pensado para ti, não para uma plataforma',
@@ -120,9 +120,6 @@ export const ptBR = {
     testConnection: 'Testar conexão',
     testing: 'A testar…',
     integrationsTitle: 'Integrações',
-    telegramToken: 'Token do bot do Telegram',
-    telegramChatId: 'Chat ID do Telegram',
-    telegramTest: 'Enviar mensagem de teste',
     adzunaAppId: 'Adzuna app ID',
     adzunaKey: 'Adzuna app key',
     itjobsKey: 'Chave da ITJobs.pt',
@@ -142,6 +139,28 @@ export const ptBR = {
     secretHelp: 'A chave é guardada encriptada e nunca volta a ser mostrada.',
     privacyNote:
       'Atenção: no plano gratuito do Gemini, os dados enviados podem ser usados para treino. O CV é limpo de email, telefone e morada antes do envio, mas isso é uma heurística.',
+  },
+  push: {
+    title: 'Notificações push',
+    description:
+      'Recebe uma notificação no navegador ou no telemóvel quando o worker encontra vagas acima do teu score mínimo.',
+    status: 'Estado neste dispositivo',
+    states: {
+      enabled: 'ativas',
+      disabled: 'desativadas',
+      denied: 'bloqueadas',
+      unsupported: 'não suportadas',
+    },
+    enable: 'Ativar notificações neste dispositivo',
+    disable: 'Desativar',
+    test: 'Enviar notificação de teste',
+    unsupported: 'Este navegador não suporta notificações push.',
+    iosHelp:
+      'No iPhone/iPad, abra este site no Safari, toque em Partilhar → Adicionar ao ecrã principal e ative as notificações a partir da app instalada.',
+    deniedHelp:
+      'As notificações estão bloqueadas para este site. Desbloqueie nas definições do navegador e tente de novo.',
+    perDevice:
+      'A ativação é por dispositivo: ative em cada navegador ou telemóvel onde quer receber avisos.',
   },
   profile: {
     title: 'Perfil',

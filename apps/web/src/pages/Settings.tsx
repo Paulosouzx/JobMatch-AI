@@ -1,12 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { PushSettings } from '../components/PushSettings';
 import { Alert, Button, Card, Field, Input, Select, Spinner, Textarea } from '../components/ui';
 import { useAuth } from '../lib/auth';
 import { formatList, parseList } from '../lib/lists';
 import { supabase } from '../lib/supabase';
 import { useAsync } from '../lib/useAsync';
 
-type SecretKind = 'llm' | 'telegram' | 'adzuna' | 'itjobs';
+type SecretKind = 'llm' | 'adzuna' | 'itjobs';
 
 const PROVIDERS = ['gemini', 'groq', 'openrouter', 'ollama'] as const;
 const DEFAULT_MODELS: Record<(typeof PROVIDERS)[number], string> = {
@@ -21,7 +22,6 @@ interface SettingsForm {
   provider: (typeof PROVIDERS)[number];
   model: string;
   baseUrl: string;
-  chatId: string;
   adzunaAppId: string;
   minScore: number;
   dailyLimit: number;
@@ -42,7 +42,6 @@ const EMPTY_SETTINGS: SettingsForm = {
   provider: 'gemini',
   model: '',
   baseUrl: '',
-  chatId: '',
   adzunaAppId: '',
   minScore: 70,
   dailyLimit: 100,
@@ -167,7 +166,7 @@ export default function Settings() {
     kind: 'success' | 'error' | 'info';
     text: string;
   } | null>(null);
-  const [testing, setTesting] = useState<'llm' | 'telegram' | null>(null);
+  const [testing, setTesting] = useState<'llm' | null>(null);
 
   const loaded = useAsync(async () => {
     const [settings, sourceRows] = await Promise.all([
@@ -193,7 +192,6 @@ export default function Settings() {
         provider: row.llm_provider,
         model: row.llm_model ?? '',
         baseUrl: row.llm_base_url ?? '',
-        chatId: row.telegram_chat_id ?? '',
         adzunaAppId: row.adzuna_app_id ?? '',
         minScore: row.min_score,
         dailyLimit: row.daily_llm_limit,
@@ -231,7 +229,6 @@ export default function Settings() {
         llm_provider: form.provider,
         llm_model: form.model.trim() || null,
         llm_base_url: form.baseUrl.trim() || null,
-        telegram_chat_id: form.chatId.trim() || null,
         adzuna_app_id: form.adzunaAppId.trim() || null,
         min_score: form.minScore,
         daily_llm_limit: form.dailyLimit,
@@ -272,7 +269,7 @@ export default function Settings() {
     if (ok) setMessage({ kind: 'success', text: t('common.saved') });
   }
 
-  async function runTest(target: 'llm' | 'telegram') {
+  async function runTest(target: 'llm') {
     setTesting(target);
     setMessage(null);
     if (await persist()) {
@@ -348,30 +345,10 @@ export default function Settings() {
         </Button>
       </Card>
 
+      <PushSettings />
+
       <Card className="space-y-4">
         <h2 className="font-semibold">{t('settings.integrationsTitle')}</h2>
-        <SecretField
-          label={t('settings.telegramToken')}
-          kind="telegram"
-          last4={last4('telegram')}
-          onChanged={secrets.reload}
-        />
-        <Field label={t('settings.telegramChatId')}>
-          <Input
-            value={form.chatId}
-            onChange={(e) => set('chatId', e.target.value)}
-            inputMode="numeric"
-          />
-        </Field>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={testing !== null}
-          onClick={() => void runTest('telegram')}
-        >
-          {testing === 'telegram' ? t('settings.testing') : t('settings.telegramTest')}
-        </Button>
-        <hr className="border-slate-200 dark:border-slate-800" />
         <Field label={`${t('settings.adzunaAppId')} (${t('settings.optional')})`}>
           <Input value={form.adzunaAppId} onChange={(e) => set('adzunaAppId', e.target.value)} />
         </Field>

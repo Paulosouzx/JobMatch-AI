@@ -1,6 +1,6 @@
 # JobMatch AI: Specification
 
-Open source job aggregator. Collects vacancies from free sources, filters by rules, scores with an LLM against the user profile and notifies good matches on Telegram. Applications are semi-automatic: the tool prepares score, rationale and cover letter; the user reviews and applies. No browser automation for applications.
+Open source job aggregator. Collects vacancies from free sources, filters by rules, scores with an LLM against the user profile and notifies good matches with browser Web Push. Applications are semi-automatic: the tool prepares score, rationale and cover letter; the user reviews and applies. No browser automation for applications.
 
 Hard requirement: zero cost, everything fits in free tiers. BYOK: every user brings their own keys.
 
@@ -32,8 +32,8 @@ docs/ .github/workflows/ (ci.yml, worker.yml)
 All tables carry `user_id` and have RLS.
 
 - `profiles`: cv_text, skills, seniority, location, work_modes, must/exclude keywords, ignored companies. Created by trigger on `auth.users`.
-- `settings`: provider, model, base url, telegram chat id, adzuna app id, min_score, daily_llm_limit, frequency_hours, llm_concurrency. Created by the same trigger.
-- `user_secrets`: Vault references and last4 per kind (llm, telegram, adzuna, itjobs). Readable only by column (no secret id) by the owner.
+- `settings`: provider, model, base url, adzuna app id, min_score, daily_llm_limit, frequency_hours, llm_concurrency. Created by the same trigger.
+- `user_secrets`: Vault references and last4 per kind (llm, adzuna, itjobs; the legacy `telegram` enum value is unused). Readable only by column (no secret id) by the owner.
 - `sources`: type, enabled, config jsonb.
 - `jobs`: normalized job, `raw jsonb`, `dedupe_hash`, `rule_status`. `unique(user_id, source, external_id)`.
 - `job_matches`: score, analysis jsonb, model, prompt_version, status (`new|seen|saved|applied|discarded`), notified_at, error.
@@ -48,12 +48,12 @@ Table names carry the `jm_` prefix (e.g. `jm_profiles`). Secret functions (`jm_s
 1. Monorepo, Supabase migrations, RLS, Vault functions, CI.
 2. Auth: login, signup, recovery, reset, magic link, optional GitHub OAuth, protected routes, ALLOW_SIGNUPS.
 3. Landing page.
-4. Settings and BYOK: `save-secret`, `test-llm`, `test-telegram`, masked keys.
+4. Settings and BYOK: `save-secret`, `test-connection` (LLM and push), masked keys.
 5. Profile page, PDF text extraction.
 6. Collectors (Remotive, Arbeitnow, RemoteOK, Greenhouse, Lever, Adzuna, ITJobs.pt), normalization, dedupe.
 7. Rule filter.
 8. LLM layer (Gemini, Groq, OpenRouter, Ollama), scoring, queue with backoff and daily limit, PII stripping, versioned prompts.
-9. Worker on GitHub Actions and Telegram notifications.
+9. Worker on GitHub Actions and Web Push notifications.
 10. Dashboard and cover letter Edge Function.
 11. Tests, CI, README with Mermaid diagram, free tier limits and privacy notes.
 
@@ -69,3 +69,7 @@ Each phase ends with a stop for validation.
 ## Status
 
 All eleven phases are implemented. Deployed to the reference project: migrations and the Edge Functions `save-secret`, `test-connection` and `generate-cover-letter`.
+
+## Notifications
+
+Telegram was replaced by Web Push, following the pattern used in the Finance Easy app: a service worker (`apps/web/public/sw.js`) handles `push` and `notificationclick`, subscriptions are stored per device in `jm_push_subscriptions` under RLS, and the worker and the `test-connection` Edge Function send with `web-push` using VAPID keys. The VAPID public key lives in `jm_app_config` and is exposed to authenticated users through `jm_vapid_public_key()`; the private key lives in Vault (`jm:vapid_private_key`) and is read only by the service role through `jm_vapid_config()`. Each run sends up to five individual notifications plus one summary for the rest.
