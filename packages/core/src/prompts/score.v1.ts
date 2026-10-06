@@ -13,9 +13,9 @@ Scoring guide (score is an integer from 0 to 100):
 Return ONLY a JSON object with exactly these keys:
 {
   "score": number,
-  "reasons": string[]
-  "matched_skills": string[]
-  "missing_skills": string[]
+  "reasons": string[],
+  "matched_skills": string[],
+  "missing_skills": string[],
   "seniority_fit": string,
   "location_fit": string,
   "summary": string
