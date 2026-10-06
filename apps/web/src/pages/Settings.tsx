@@ -1,4 +1,13 @@
-import { CircleCheck, KeyRound, Loader2, PlugZap, Plus, Save, Trash2 } from 'lucide-react';
+import {
+  CircleCheck,
+  KeyRound,
+  ListFilter,
+  Loader2,
+  PlugZap,
+  Plus,
+  Save,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -32,7 +41,7 @@ type SecretKind = 'llm' | 'adzuna' | 'itjobs';
 const PROVIDERS = ['gemini', 'groq', 'openrouter', 'ollama'] as const;
 const DEFAULT_MODELS: Record<(typeof PROVIDERS)[number], string> = {
   gemini: 'gemini-2.5-flash',
-  groq: 'llama-3.3-70b-versatile',
+  groq: 'openai/gpt-oss-120b',
   openrouter: 'meta-llama/llama-3.3-70b-instruct:free',
   ollama: 'llama3.1',
 };
@@ -250,6 +259,8 @@ export default function Settings() {
   const [sources, setSources] = useState<SourcesForm>(EMPTY_SOURCES);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [models, setModels] = useState<string[]>([]);
+  const [loadingModels, setLoadingModels] = useState(false);
 
   const loaded = useAsync(async () => {
     const [settings, sourceRows] = await Promise.all([
@@ -312,7 +323,7 @@ export default function Settings() {
       .from('jm_settings')
       .update({
         llm_provider: form.provider,
-        llm_model: form.model.trim() || null,
+        llm_model: form.model.trim() || DEFAULT_MODELS[form.provider],
         llm_base_url: form.baseUrl.trim() || null,
         adzuna_app_id: form.adzunaAppId.trim() || null,
         min_score: form.minScore,
@@ -369,8 +380,33 @@ export default function Settings() {
     } else if (data.ok) {
       toast.success(t('settings.testOk'), { id, description: data.message });
     } else {
-      toast.error(t('settings.testFailed'), { id, description: data.message });
+      const notFound = /model_not_found|does not exist|not found/i.test(data.message);
+      toast.error(t('settings.testFailed'), {
+        id,
+        description: notFound ? `${t('settings.modelNotFound')} ${data.message}` : data.message,
+      });
     }
+  }
+
+  async function loadModels() {
+    setLoadingModels(true);
+    const saveError = await persist();
+    if (saveError) {
+      setLoadingModels(false);
+      toast.error(t('settings.saveError'), { description: saveError });
+      return;
+    }
+    const { data, error } = await callFunction<{ ok: boolean; message?: string; models: string[] }>(
+      'test-connection',
+      { target: 'models' },
+    );
+    setLoadingModels(false);
+    if (error || !data?.ok) {
+      toast.error(t('settings.modelsFailed'), { description: error ?? data?.message });
+      return;
+    }
+    setModels(data.models);
+    toast.success(t('settings.modelsLoaded', { count: data.models.length }));
   }
 
   const isOllama = form.provider === 'ollama';
@@ -423,9 +459,32 @@ export default function Settings() {
                   value={form.model}
                   onChange={(e) => set('model', e.target.value)}
                   placeholder={DEFAULT_MODELS[form.provider]}
+                  list="llm-models"
                 />
               </FormField>
             </div>
+            <datalist id="llm-models">
+              {models.map((model) => (
+                <option key={model} value={model} />
+              ))}
+            </datalist>
+            {models.length > 0 && (
+              <div className="grid gap-2">
+                <Label>{t('settings.availableModels')}</Label>
+                <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto rounded-lg border p-2">
+                  {models.map((model) => (
+                    <button
+                      key={model}
+                      type="button"
+                      onClick={() => set('model', model)}
+                      className={`rounded-md border px-2 py-1 font-mono text-xs transition-colors ${form.model === model ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-accent'}`}
+                    >
+                      {model}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {isOllama ? (
               <FormField label={t('settings.baseUrl')}>
                 <Input
@@ -445,15 +504,26 @@ export default function Settings() {
             )}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3">
               <p className="text-xs text-muted-foreground">{t('settings.privacyNote')}</p>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={testing}
-                onClick={() => void testConnection()}
-              >
-                {testing ? <Loader2 className="animate-spin" /> : <PlugZap />}
-                {testing ? t('settings.testing') : t('settings.testConnection')}
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={loadingModels || testing}
+                  onClick={() => void loadModels()}
+                >
+                  {loadingModels ? <Loader2 className="animate-spin" /> : <ListFilter />}
+                  {t('settings.loadModels')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={testing}
+                  onClick={() => void testConnection()}
+                >
+                  {testing ? <Loader2 className="animate-spin" /> : <PlugZap />}
+                  {testing ? t('settings.testing') : t('settings.testConnection')}
+                </Button>
+              </div>
             </div>
           </SectionCard>
 

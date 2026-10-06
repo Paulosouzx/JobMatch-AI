@@ -286,6 +286,12 @@ export const ptBR = {
     saveAll: 'Guardar alterações',
     saveHint: 'As chaves são guardadas logo que as adicionas. O resto é guardado aqui.',
     testOk: 'Conexão com o LLM a funcionar',
+    loadModels: 'Ver modelos disponíveis',
+    availableModels: 'Modelos disponíveis na tua conta (clica para escolher)',
+    modelsLoaded: '{{count}} modelos encontrados',
+    modelsFailed: 'Não foi possível carregar os modelos',
+    modelNotFound:
+      'Este modelo não existe na tua conta. Usa "Ver modelos disponíveis" e escolhe um da lista.',
     testFailed: 'A conexão com o LLM falhou',
     sourceNames: {
       remotive: 'Remotive',

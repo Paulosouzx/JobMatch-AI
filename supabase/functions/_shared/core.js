@@ -145,7 +145,7 @@ var LLMRequestError = class extends Error {
 // packages/core/src/llm/clients.ts
 var DEFAULT_MODELS = {
   gemini: "gemini-2.5-flash",
-  groq: "llama-3.3-70b-versatile",
+  groq: "openai/gpt-oss-120b",
   openrouter: "meta-llama/llama-3.3-70b-instruct:free",
   ollama: "llama3.1"
 };

@@ -2,6 +2,7 @@ import { requireUser, serviceClient } from '../_shared/auth.ts';
 import { createLLMProvider } from '../_shared/core.js';
 import { json, preflight, readBody } from '../_shared/http.ts';
 import { loadLlmConfig } from '../_shared/llm-config.ts';
+import { listModels } from '../_shared/models.ts';
 import { sendPushToUser } from '../_shared/push.ts';
 
 Deno.serve(async (req) => {
@@ -26,6 +27,20 @@ Deno.serve(async (req) => {
         ? { ok: true, message: `Notificação enviada para ${result.sent} dispositivo(s).` }
         : { ok: false, message: result.error ?? 'Falha ao enviar' },
     );
+  }
+
+  if (body.target === 'models') {
+    const loaded = await loadLlmConfig(serviceClient(), userId);
+    if ('error' in loaded) return json({ ok: false, message: loaded.error, models: [] });
+    try {
+      return json({ ok: true, models: await listModels(loaded.config) });
+    } catch (error) {
+      return json({
+        ok: false,
+        message: error instanceof Error ? error.message : String(error),
+        models: [],
+      });
+    }
   }
 
   if (body.target === 'llm') {
