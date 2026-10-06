@@ -5,8 +5,16 @@ import { cn } from '@/lib/utils';
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import { Select as SelectPrimitive } from 'radix-ui';
 
-function Select({ ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
-  return <SelectPrimitive.Root data-slot="select" {...props} />;
+function Select({ onValueChange, ...props }: React.ComponentProps<typeof SelectPrimitive.Root>) {
+  return (
+    <SelectPrimitive.Root
+      data-slot="select"
+      onValueChange={(value) => {
+        if (value !== '') onValueChange?.(value);
+      }}
+      {...props}
+    />
+  );
 }
 
 function SelectGroup({ ...props }: React.ComponentProps<typeof SelectPrimitive.Group>) {

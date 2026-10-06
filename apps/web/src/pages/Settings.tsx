@@ -335,6 +335,8 @@ export default function Settings() {
     setForm((f) => ({ ...f, [key]: value }));
 
   async function persist(): Promise<string | null> {
+    if (!(PROVIDERS as readonly string[]).includes(form.provider))
+      return t('settings.invalidProvider');
     const settingsResult = await supabase
       .from('jm_settings')
       .update({
@@ -467,7 +469,12 @@ export default function Settings() {
               <FormField label={t('settings.provider')}>
                 <Select
                   value={form.provider}
-                  onValueChange={(value) => set('provider', value as SettingsForm['provider'])}
+                  onValueChange={(value) => {
+                    if ((PROVIDERS as readonly string[]).includes(value)) {
+                      set('provider', value as SettingsForm['provider']);
+                      setModels([]);
+                    }
+                  }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue />

@@ -301,6 +301,7 @@ export const ptBR = {
     saved: 'Configurações guardadas',
     saveError: 'Não foi possível guardar',
     saveAll: 'Guardar alterações',
+    invalidProvider: 'Escolhe um provider de LLM válido antes de guardar.',
     advanced: 'Opções avançadas',
     advancedHint: 'Mostra Matching e Integrações.',
     saveHint: 'As chaves são guardadas logo que as adicionas. O resto é guardado aqui.',
