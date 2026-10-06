@@ -32,7 +32,7 @@ function truncate(value: string, max: number): string {
 }
 
 export function formatMatchNotification(
-  matchId: string,
+  jobId: string,
   job: NotifyJob,
   analysis: MatchScore,
 ): PushPayload {
@@ -41,8 +41,8 @@ export function formatMatchNotification(
   return {
     title: truncate(`${analysis.score} · ${job.title}`, 80),
     body: truncate(`${job.company}${where}${reasons ? `\n${reasons}` : ''}`, 220),
-    url: `/app/jobs/${matchId}`,
-    tag: `jobmatch-${matchId}`,
+    url: `/app/jobs/${jobId}`,
+    tag: `jobmatch-${jobId}`,
   };
 }
 

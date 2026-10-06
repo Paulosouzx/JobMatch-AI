@@ -358,7 +358,21 @@ export const ptBR = {
   },
   jobs: {
     title: 'Vagas',
-    empty: 'Ainda não há vagas avaliadas. O worker preenche esta lista quando corre.',
+    empty: 'Ainda não há vagas. O worker preenche esta lista quando corre.',
+    counts:
+      '{{total}} vagas · {{scored}} avaliadas · {{pending}} por avaliar · {{filtered}} filtradas',
+    evaluation: 'Avaliação',
+    evaluations: {
+      scored: 'Avaliada',
+      pending: 'Por avaliar',
+      filtered: 'Filtrada',
+      error: 'Erro na avaliação',
+    },
+    filteredBy: 'Excluída pelas tuas regras: {{reason}}',
+    pendingAnalysis:
+      'Esta vaga ainda não foi avaliada pela IA. Será analisada na próxima execução do worker.',
+    filteredAnalysis:
+      'Esta vaga não foi enviada à IA porque não passou nas tuas regras ({{reason}}).',
     minScore: 'Score mínimo',
     source: 'Fonte',
     status: 'Estado',

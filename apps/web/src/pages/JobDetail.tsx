@@ -1,37 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { Alert, Button, Card, ScoreBadge, Spinner, Textarea } from '../components/legacy-ui';
+import { evaluationOf, matchOf, type JobRow, type MatchStatus } from '../lib/jobs';
 import { supabase } from '../lib/supabase';
 import { useAsync } from '../lib/useAsync';
-
-type Status = 'new' | 'seen' | 'saved' | 'applied' | 'discarded';
-
-interface Detail {
-  id: string;
-  job_id: string;
-  score: number | null;
-  status: Status;
-  error: string | null;
-  analysis: {
-    reasons?: string[];
-    matched_skills?: string[];
-    missing_skills?: string[];
-    seniority_fit?: string;
-    location_fit?: string;
-    summary?: string;
-  } | null;
-  jm_jobs: {
-    id: string;
-    title: string;
-    company: string;
-    location: string | null;
-    remote: boolean;
-    description: string;
-    url: string;
-    source: string;
-  };
-}
 
 function Chips({ items, tone }: { items: string[]; tone: 'good' | 'bad' }) {
   const style =
@@ -49,70 +22,97 @@ function Chips({ items, tone }: { items: string[]; tone: 'good' | 'bad' }) {
   );
 }
 
+type Loaded =
+  { kind: 'job'; job: JobRow; letter: string } | { kind: 'redirect'; jobId: string } | null;
+
 export default function JobDetail() {
   const { t } = useTranslation();
-  const { matchId = '' } = useParams();
-  const [status, setStatus] = useState<Status | null>(null);
+  const { jobId = '' } = useParams();
+  const [status, setStatus] = useState<MatchStatus | null>(null);
   const [letter, setLetter] = useState('');
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
 
-  const detail = useAsync(async () => {
+  const detail = useAsync<Loaded>(async () => {
     const { data, error } = await supabase
-      .from('jm_job_matches')
+      .from('jm_jobs')
       .select(
-        'id, job_id, score, status, error, analysis, jm_jobs!inner(id, title, company, location, remote, description, url, source)',
+        'id, title, company, location, remote, source, url, posted_at, created_at, rule_status, reject_reason, description, jm_job_matches(id, score, status, error, analysis)',
       )
-      .eq('id', matchId)
+      .eq('id', jobId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (!data) return null;
+    if (!data) {
+      const { data: legacy } = await supabase
+        .from('jm_job_matches')
+        .select('job_id')
+        .eq('id', jobId)
+        .maybeSingle();
+      return legacy ? { kind: 'redirect', jobId: legacy.job_id as string } : null;
+    }
     const application = await supabase
       .from('jm_applications')
       .select('cover_letter')
-      .eq('job_id', data.job_id)
+      .eq('job_id', jobId)
       .maybeSingle();
-    return { match: data as unknown as Detail, letter: application.data?.cover_letter ?? '' };
-  }, [matchId]);
+    return {
+      kind: 'job',
+      job: data as unknown as JobRow,
+      letter: application.data?.cover_letter ?? '',
+    };
+  }, [jobId]);
+
+  const loaded = detail.data;
+  const match = loaded?.kind === 'job' ? matchOf(loaded.job) : null;
 
   useEffect(() => {
-    if (!detail.data) return;
-    setStatus(detail.data.match.status);
-    setLetter(detail.data.letter);
-    if (detail.data.match.status === 'new') {
+    if (loaded?.kind !== 'job') return;
+    setLetter(loaded.letter);
+    const current = matchOf(loaded.job);
+    setStatus(current?.status ?? null);
+    if (current?.status === 'new') {
       void supabase
         .from('jm_job_matches')
         .update({ status: 'seen' })
-        .eq('id', matchId)
+        .eq('id', current.id)
         .then(() => setStatus('seen'));
     }
-  }, [detail.data, matchId]);
+  }, [loaded]);
 
   if (detail.loading) return <Spinner label={t('common.loading')} />;
   if (detail.error) return <Alert>{detail.error}</Alert>;
-  if (!detail.data) return <Alert>{t('jobs.notFound')}</Alert>;
+  if (!loaded) return <Alert>{t('jobs.notFound')}</Alert>;
+  if (loaded.kind === 'redirect') return <Navigate to={`/app/jobs/${loaded.jobId}`} replace />;
 
-  const { match } = detail.data;
-  const job = match.jm_jobs;
-  const analysis = match.analysis;
+  const job = loaded.job;
+  const state = evaluationOf(job);
+  const analysis = match?.analysis ?? null;
 
-  async function changeStatus(next: Status) {
-    const { error } = await supabase
-      .from('jm_job_matches')
-      .update({ status: next })
-      .eq('id', match.id);
-    if (error) return setMessage({ kind: 'error', text: error.message });
-    setStatus(next);
+  async function userId() {
+    return (await supabase.auth.getUser()).data.user?.id;
+  }
+
+  async function changeStatus(next: MatchStatus) {
+    if (match) {
+      const { error } = await supabase
+        .from('jm_job_matches')
+        .update({ status: next })
+        .eq('id', match.id);
+      if (error) return setMessage({ kind: 'error', text: error.message });
+      setStatus(next);
+    }
     if (next === 'applied') {
-      await supabase.from('jm_applications').upsert(
+      const { error } = await supabase.from('jm_applications').upsert(
         {
-          job_id: match.job_id,
+          job_id: job.id,
           status: 'applied',
           applied_at: new Date().toISOString(),
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: await userId(),
         },
         { onConflict: 'job_id' },
       );
+      if (error) return setMessage({ kind: 'error', text: error.message });
+      if (!match) setMessage({ kind: 'success', text: t('jobs.statuses.applied') });
     }
   }
 
@@ -120,7 +120,7 @@ export default function JobDetail() {
     setGenerating(true);
     setMessage(null);
     const { data, error } = await supabase.functions.invoke('generate-cover-letter', {
-      body: { jobId: match.job_id },
+      body: { jobId: job.id },
     });
     setGenerating(false);
     if (error || !data || typeof data.text !== 'string') {
@@ -134,11 +134,10 @@ export default function JobDetail() {
   }
 
   async function saveLetter() {
-    const userId = (await supabase.auth.getUser()).data.user?.id;
     const { error } = await supabase
       .from('jm_applications')
       .upsert(
-        { user_id: userId, job_id: match.job_id, cover_letter: letter },
+        { user_id: await userId(), job_id: job.id, cover_letter: letter },
         { onConflict: 'job_id' },
       );
     setMessage(
@@ -167,7 +166,13 @@ export default function JobDetail() {
               {job.remote ? ` · ${t('jobs.remote')}` : ''}
             </p>
           </div>
-          <ScoreBadge score={match.score} />
+          {state === 'scored' ? (
+            <ScoreBadge score={match?.score ?? null} />
+          ) : (
+            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              {t(`jobs.evaluations.${state}`)}
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <a
@@ -185,12 +190,16 @@ export default function JobDetail() {
           >
             {t('jobs.markApplied')}
           </Button>
-          <Button variant="secondary" onClick={() => void changeStatus('saved')}>
-            {t('jobs.save')}
-          </Button>
-          <Button variant="ghost" onClick={() => void changeStatus('discarded')}>
-            {t('jobs.discard')}
-          </Button>
+          {match && (
+            <>
+              <Button variant="secondary" onClick={() => void changeStatus('saved')}>
+                {t('jobs.save')}
+              </Button>
+              <Button variant="ghost" onClick={() => void changeStatus('discarded')}>
+                {t('jobs.discard')}
+              </Button>
+            </>
+          )}
           {status && (
             <span className="self-center text-sm text-slate-500">
               {t(`jobs.statuses.${status}`)}
@@ -201,7 +210,17 @@ export default function JobDetail() {
 
       <Card className="space-y-3">
         <h2 className="font-semibold">{t('jobs.analysis')}</h2>
-        {!analysis && <p className="text-sm text-slate-500">{match.error ?? t('jobs.noScore')}</p>}
+        {state === 'pending' && (
+          <p className="text-sm text-slate-500">{t('jobs.pendingAnalysis')}</p>
+        )}
+        {state === 'filtered' && (
+          <p className="text-sm text-slate-500">
+            {t('jobs.filteredAnalysis', { reason: job.reject_reason ?? '-' })}
+          </p>
+        )}
+        {state === 'error' && (
+          <p className="text-sm text-slate-500">{match?.error ?? t('jobs.noScore')}</p>
+        )}
         {analysis?.summary && <p>{analysis.summary}</p>}
         {analysis?.reasons && (
           <ul className="list-disc space-y-1 pl-5 text-sm">

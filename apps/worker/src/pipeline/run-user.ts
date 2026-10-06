@@ -273,7 +273,7 @@ async function notifyMatches(
 
   const { data, error } = await db
     .from('jm_job_matches')
-    .select('id, score, analysis, jm_jobs!inner(title, company, location)')
+    .select('id, job_id, score, analysis, jm_jobs!inner(title, company, location)')
     .eq('user_id', userId)
     .is('notified_at', null)
     .is('error', null)
@@ -291,7 +291,7 @@ async function notifyMatches(
     .slice(0, MAX_INDIVIDUAL_NOTIFICATIONS)
     .map((row) =>
       formatMatchNotification(
-        row.id,
+        row.job_id as string,
         row.jm_jobs as unknown as { title: string; company: string; location: string | null },
         row.analysis as MatchScore,
       ),

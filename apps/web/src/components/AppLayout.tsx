@@ -1,8 +1,11 @@
+import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
+import { AppLoader } from './app/AppLoader';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { useTheme } from '../lib/theme';
 import { ThemeToggle } from './legacy-ui';
+import { Brand } from './marketing/Brand';
 
 const LINKS = [
   { to: '/app', key: 'nav.jobs', end: true },
@@ -20,9 +23,7 @@ export function AppLayout() {
     <div className="min-h-screen">
       <header className="border-b border-slate-200 dark:border-slate-800">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <NavLink to="/" className="font-bold text-brand-600">
-            JobMatch AI
-          </NavLink>
+          <Brand to="/app" size="sm" />
           <nav className="flex flex-wrap items-center gap-1 text-sm">
             {LINKS.map((link) => (
               <NavLink
@@ -48,7 +49,9 @@ export function AppLayout() {
         </div>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-6">
-        <Outlet />
+        <Suspense fallback={<AppLoader fullScreen={false} />}>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );

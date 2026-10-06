@@ -1,9 +1,8 @@
 import { lazy, Suspense } from 'react';
-import { useTranslation } from 'react-i18next';
 import { Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
 import { ConfigMissing } from './components/ConfigMissing';
-import { Spinner } from './components/legacy-ui';
+import { AppLoader } from './components/app/AppLoader';
 import { isConfigured } from './lib/config';
 import { RequireAuth } from './routes/RequireAuth';
 
@@ -21,11 +20,10 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 const DesignSystem = lazy(() => import('./pages/DesignSystem'));
 
 export default function App() {
-  const { t } = useTranslation();
   if (!isConfigured) return <ConfigMissing />;
 
   return (
-    <Suspense fallback={<Spinner label={t('common.loading')} />}>
+    <Suspense fallback={<AppLoader />}>
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
@@ -45,12 +43,12 @@ export default function App() {
         <Route element={<RequireAuth />}>
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<Jobs />} />
-            <Route path="jobs/:matchId" element={<JobDetail />} />
+            <Route path="jobs/:jobId" element={<JobDetail />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="runs" element={<Runs />} />
             <Route path="design" element={<DesignSystem />} />
-            <Route path="*" element={<NotFound />} />
+            <Route path="*" element={<NotFound embedded />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFound />} />

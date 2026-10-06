@@ -2,7 +2,7 @@ import { LogOut, ShieldX } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { Brand } from '../components/marketing/Brand';
-import { Spinner } from '../components/legacy-ui';
+import { AppLoader } from '../components/app/AppLoader';
 import { useAuth } from '../lib/auth';
 import { config } from '../lib/config';
 
@@ -48,14 +48,13 @@ function AccessDenied({ kind }: { kind: 'denied' | 'error' }) {
 export function RequireAuth() {
   const { session, loading, access } = useAuth();
   const location = useLocation();
-  const { t } = useTranslation();
 
-  if (loading) return <Spinner label={t('common.loading')} />;
+  if (loading) return <AppLoader />;
   if (!session) {
     const from = `${location.pathname}${location.search}`;
     return <Navigate to="/login" replace state={{ from }} />;
   }
-  if (access === 'checking') return <Spinner label={t('common.loading')} />;
+  if (access === 'checking') return <AppLoader />;
   if (access === 'denied' || access === 'error') return <AccessDenied kind={access} />;
   return <Outlet />;
 }
