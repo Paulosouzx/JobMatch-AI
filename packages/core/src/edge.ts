@@ -1,4 +1,4 @@
-export { createLLMProvider, extractJson, parseScore } from './llm/provider';
+export { createLLMProvider, extractJson, parseExtractedProfile, parseScore } from './llm/provider';
 export { createChatClient, DEFAULT_MODELS } from './llm/clients';
 export { stripPii } from './llm/sanitize';
 export { RateLimitError, LLMParseError, LLMRequestError } from './llm/errors';

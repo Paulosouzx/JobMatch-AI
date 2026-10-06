@@ -115,6 +115,37 @@ var matchScoreSchema = z.object({
   location_fit: z.string(),
   summary: z.string()
 });
+var extractedProfileSchema = z.object({
+  skills: z.array(z.string()).max(40),
+  seniority: z.enum(["intern", "junior", "mid", "senior", "lead"]).nullable(),
+  location: z.string().nullable(),
+  work_modes: z.array(workModeSchema),
+  keywords: z.array(z.string()).max(12),
+  headline: z.string()
+});
+
+// packages/core/src/prompts/profile-extract.v1.ts
+var PROFILE_EXTRACT_PROMPT_VERSION = "profile-extract.v1";
+var PROFILE_EXTRACT_SYSTEM_PROMPT = `You read a candidate CV and extract structured job-search preferences. Return ONLY a JSON object with exactly these keys:
+{
+  "skills": string[],
+  "seniority": "intern" | "junior" | "mid" | "senior" | "lead" | null,
+  "location": string | null,
+  "work_modes": ("remote" | "hybrid" | "onsite")[],
+  "keywords": string[],
+  "headline": string
+}
+Rules:
+- "skills": 5 to 20 concrete technical or professional skills, tools, languages and frameworks that appear in the CV, as short canonical names (for example "TypeScript", "React", "PostgreSQL"). No soft skills.
+- "seniority": infer from total years of professional experience and job titles (under 1 year intern or junior, 1 to 3 junior, 3 to 6 mid, 6 or more senior, team or tech lead roles lead). Use null if unclear.
+- "location": the city and country where the candidate lives, if stated, for example "Porto, Portugal". Never include street addresses or postal codes. Use null if absent.
+- "work_modes": only modes the CV explicitly mentions as preferred or experienced; empty array if not stated.
+- "keywords": 3 to 6 role keywords that job titles should contain for this candidate, for example "frontend", "react", "full-stack".
+- "headline": one short line describing the candidate's profile, in the CV language.
+Do not include markdown, code fences or text outside the JSON object. Do not invent facts.`;
+function buildProfileExtractUserPrompt(cvText) {
+  return ["CV:", cvText.slice(0, 12e3)].join("\n");
+}
 
 // packages/core/src/llm/errors.ts
 var RateLimitError = class extends Error {
@@ -256,6 +287,23 @@ function extractJson(text) {
   if (start === -1 || end <= start) throw new Error("no JSON object found");
   return JSON.parse(candidate.slice(start, end + 1));
 }
+function parseWith(schema, text) {
+  let data;
+  try {
+    data = extractJson(text);
+  } catch (error) {
+    return { problem: `output is not valid JSON (${error.message})` };
+  }
+  const result = schema.safeParse(data);
+  if (result.success) return { value: result.data };
+  return {
+    problem: result.error.issues.map((issue) => `${issue.path.map(String).join(".") || "root"}: ${issue.message}`).join("; ")
+  };
+}
+function parseExtractedProfile(text) {
+  const parsed = parseWith(extractedProfileSchema, text);
+  return "value" in parsed ? { profile: parsed.value } : parsed;
+}
 function parseScore(text) {
   let data;
   try {
@@ -300,6 +348,36 @@ ${buildRepairPrompt(first, parsed.problem)}`,
       }
       throw new LLMParseError(`Invalid LLM output after retry: ${retried.problem}`, second);
     },
+    async extractProfile(rawCv) {
+      const user = buildProfileExtractUserPrompt(stripPii(rawCv));
+      const first = await call(
+        () => client.complete({
+          system: PROFILE_EXTRACT_SYSTEM_PROMPT,
+          user,
+          json: true,
+          temperature: 0
+        })
+      );
+      const parsed = parseExtractedProfile(first);
+      if ("profile" in parsed) {
+        return { profile: parsed.profile, model, promptVersion: PROFILE_EXTRACT_PROMPT_VERSION };
+      }
+      const second = await call(
+        () => client.complete({
+          system: PROFILE_EXTRACT_SYSTEM_PROMPT,
+          user: `${user}
+
+${buildRepairPrompt(first, parsed.problem)}`,
+          json: true,
+          temperature: 0
+        })
+      );
+      const retried = parseExtractedProfile(second);
+      if ("profile" in retried) {
+        return { profile: retried.profile, model, promptVersion: PROFILE_EXTRACT_PROMPT_VERSION };
+      }
+      throw new LLMParseError(`Invalid LLM output after retry: ${retried.problem}`, second);
+    },
     async draftCoverLetter(job, profile) {
       const cvText = stripPii(profile.cvText).slice(0, 8e3);
       const text = await call(
@@ -338,6 +416,7 @@ export {
   createChatClient,
   createLLMProvider,
   extractJson,
+  parseExtractedProfile,
   parseScore,
   stripPii
 };

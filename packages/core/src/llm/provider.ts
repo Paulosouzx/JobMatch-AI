@@ -10,7 +10,19 @@ import {
   SCORE_PROMPT_VERSION,
   SCORE_SYSTEM_PROMPT,
 } from '../prompts/score.v1';
-import { matchScoreSchema, type Job, type MatchScore, type Profile } from '../types';
+import {
+  extractedProfileSchema,
+  matchScoreSchema,
+  type ExtractedProfile,
+  type Job,
+  type MatchScore,
+  type Profile,
+} from '../types';
+import {
+  buildProfileExtractUserPrompt,
+  PROFILE_EXTRACT_PROMPT_VERSION,
+  PROFILE_EXTRACT_SYSTEM_PROMPT,
+} from '../prompts/profile-extract.v1';
 import { createChatClient, DEFAULT_MODELS, type ChatClient, type LLMConfig } from './clients';
 import { LLMParseError } from './errors';
 import type { LLMQueue } from './queue';
@@ -33,8 +45,15 @@ export interface ConnectionResult {
   message: string;
 }
 
+export interface ProfileExtractResult {
+  profile: ExtractedProfile;
+  model: string;
+  promptVersion: string;
+}
+
 export interface LLMProvider {
   scoreJob(job: Job, profile: Profile): Promise<ScoreResult>;
+  extractProfile(cvText: string): Promise<ProfileExtractResult>;
   draftCoverLetter(job: Job, profile: Profile): Promise<CoverLetterResult>;
   testConnection(): Promise<ConnectionResult>;
 }
@@ -61,6 +80,38 @@ export function extractJson(text: string): unknown {
   const end = candidate.lastIndexOf('}');
   if (start === -1 || end <= start) throw new Error('no JSON object found');
   return JSON.parse(candidate.slice(start, end + 1));
+}
+
+function parseWith<T>(
+  schema: {
+    safeParse: (
+      data: unknown,
+    ) =>
+      | { success: true; data: T }
+      | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } };
+  },
+  text: string,
+): { value: T } | { problem: string } {
+  let data: unknown;
+  try {
+    data = extractJson(text);
+  } catch (error) {
+    return { problem: `output is not valid JSON (${(error as Error).message})` };
+  }
+  const result = schema.safeParse(data);
+  if (result.success) return { value: result.data };
+  return {
+    problem: result.error.issues
+      .map((issue) => `${issue.path.map(String).join('.') || 'root'}: ${issue.message}`)
+      .join('; '),
+  };
+}
+
+export function parseExtractedProfile(
+  text: string,
+): { profile: ExtractedProfile } | { problem: string } {
+  const parsed = parseWith(extractedProfileSchema, text);
+  return 'value' in parsed ? { profile: parsed.value } : parsed;
 }
 
 export function parseScore(text: string): { score: MatchScore } | { problem: string } {
@@ -106,6 +157,35 @@ export function createLLMProvider(config: LLMConfig, options: ProviderOptions): 
       const retried = parseScore(second);
       if ('score' in retried) {
         return { score: retried.score, model, promptVersion: SCORE_PROMPT_VERSION };
+      }
+      throw new LLMParseError(`Invalid LLM output after retry: ${retried.problem}`, second);
+    },
+
+    async extractProfile(rawCv) {
+      const user = buildProfileExtractUserPrompt(stripPii(rawCv));
+      const first = await call(() =>
+        client.complete({
+          system: PROFILE_EXTRACT_SYSTEM_PROMPT,
+          user,
+          json: true,
+          temperature: 0,
+        }),
+      );
+      const parsed = parseExtractedProfile(first);
+      if ('profile' in parsed) {
+        return { profile: parsed.profile, model, promptVersion: PROFILE_EXTRACT_PROMPT_VERSION };
+      }
+      const second = await call(() =>
+        client.complete({
+          system: PROFILE_EXTRACT_SYSTEM_PROMPT,
+          user: `${user}\n\n${buildRepairPrompt(first, parsed.problem)}`,
+          json: true,
+          temperature: 0,
+        }),
+      );
+      const retried = parseExtractedProfile(second);
+      if ('profile' in retried) {
+        return { profile: retried.profile, model, promptVersion: PROFILE_EXTRACT_PROMPT_VERSION };
       }
       throw new LLMParseError(`Invalid LLM output after retry: ${retried.problem}`, second);
     },

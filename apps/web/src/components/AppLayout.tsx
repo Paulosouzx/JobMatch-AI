@@ -1,58 +1,55 @@
-import { Suspense } from 'react';
-import { useTranslation } from 'react-i18next';
-import { AppLoader } from './app/AppLoader';
-import { NavLink, Outlet } from 'react-router-dom';
-import { useAuth } from '../lib/auth';
-import { useTheme } from '../lib/theme';
-import { ThemeToggle } from './legacy-ui';
-import { Brand } from './marketing/Brand';
-
-const LINKS = [
-  { to: '/app', key: 'nav.jobs', end: true },
-  { to: '/app/profile', key: 'nav.profile', end: false },
-  { to: '/app/settings', key: 'nav.settings', end: false },
-  { to: '/app/runs', key: 'nav.runs', end: false },
-];
+import { motion, useReducedMotion } from 'motion/react';
+import { Suspense, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { AppBreadcrumbs } from '@/components/app/AppBreadcrumbs';
+import { AppSidebar } from '@/components/app/AppSidebar';
+import { CommandMenu } from '@/components/app/CommandMenu';
+import { preloadAppPages } from '@/components/app/navigation';
+import { PageFallback } from '@/components/app/PageFallback';
+import { HeaderUserMenu } from '@/components/app/UserMenu';
+import { Separator } from '@/components/ui/separator';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 
 export function AppLayout() {
-  const { t } = useTranslation();
-  const { signOut } = useAuth();
-  const { dark, toggle } = useTheme();
+  const { pathname } = useLocation();
+  const reduceMotion = useReducedMotion();
+
+  useEffect(() => {
+    preloadAppPages();
+  }, []);
 
   return (
-    <div className="min-h-screen">
-      <header className="border-b border-slate-200 dark:border-slate-800">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3">
-          <Brand to="/app" size="sm" />
-          <nav className="flex flex-wrap items-center gap-1 text-sm">
-            {LINKS.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={link.end}
-                className={({ isActive }) =>
-                  `rounded-lg px-3 py-2 ${isActive ? 'bg-brand-50 font-medium text-brand-700 dark:bg-brand-950 dark:text-brand-300' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'}`
-                }
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset className="min-w-0">
+        <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/85 px-3 backdrop-blur supports-[backdrop-filter]:bg-background/70 sm:px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 data-[orientation=vertical]:h-4" />
+          <div className="hidden min-w-0 flex-1 md:block">
+            <AppBreadcrumbs />
+          </div>
+          <div className="flex flex-1 items-center justify-end gap-2 md:flex-none">
+            <div className="min-w-0 flex-1 md:flex-none">
+              <CommandMenu />
+            </div>
+            <HeaderUserMenu />
+          </div>
+        </header>
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <div className="mx-auto w-full max-w-6xl">
+            <Suspense fallback={<PageFallback />}>
+              <motion.div
+                key={pathname}
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
               >
-                {t(link.key)}
-              </NavLink>
-            ))}
-            <ThemeToggle dark={dark} onToggle={toggle} label={t('common.theme')} />
-            <button
-              type="button"
-              onClick={() => void signOut()}
-              className="rounded-lg px-3 py-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-            >
-              {t('nav.logout')}
-            </button>
-          </nav>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        <Suspense fallback={<AppLoader fullScreen={false} />}>
-          <Outlet />
-        </Suspense>
-      </main>
-    </div>
+                <Outlet />
+              </motion.div>
+            </Suspense>
+          </div>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

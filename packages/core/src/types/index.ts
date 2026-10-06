@@ -41,3 +41,13 @@ export const matchScoreSchema = z.object({
   summary: z.string(),
 });
 export type MatchScore = z.infer<typeof matchScoreSchema>;
+
+export const extractedProfileSchema = z.object({
+  skills: z.array(z.string()).max(40),
+  seniority: z.enum(['intern', 'junior', 'mid', 'senior', 'lead']).nullable(),
+  location: z.string().nullable(),
+  work_modes: z.array(workModeSchema),
+  keywords: z.array(z.string()).max(12),
+  headline: z.string(),
+});
+export type ExtractedProfile = z.infer<typeof extractedProfileSchema>;

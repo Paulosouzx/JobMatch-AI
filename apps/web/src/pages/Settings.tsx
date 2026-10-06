@@ -260,6 +260,22 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [models, setModels] = useState<string[]>([]);
+  const [advanced, setAdvanced] = useState(() => {
+    try {
+      return localStorage.getItem('settings.advanced') === '1';
+    } catch {
+      return false;
+    }
+  });
+
+  function toggleAdvanced(value: boolean) {
+    setAdvanced(value);
+    try {
+      localStorage.setItem('settings.advanced', value ? '1' : '0');
+    } catch {
+      return;
+    }
+  }
   const [loadingModels, setLoadingModels] = useState(false);
 
   const loaded = useAsync(async () => {
@@ -415,7 +431,21 @@ export default function Settings() {
 
   return (
     <form onSubmit={onSubmit} className="mx-auto w-full max-w-3xl space-y-6 pb-24">
-      <PageHeader title={t('settings.title')} description={t('settings.description')} />
+      <PageHeader
+        title={t('settings.title')}
+        description={t('settings.description')}
+        actions={
+          <div className="flex items-center gap-3 rounded-lg border px-3 py-2">
+            <div className="grid text-right">
+              <Label htmlFor="advanced-settings" className="justify-end">
+                {t('settings.advanced')}
+              </Label>
+              <span className="text-xs text-muted-foreground">{t('settings.advancedHint')}</span>
+            </div>
+            <Switch id="advanced-settings" checked={advanced} onCheckedChange={toggleAdvanced} />
+          </div>
+        }
+      />
 
       {loaded.error && (
         <p
@@ -529,52 +559,54 @@ export default function Settings() {
 
           <PushSettings />
 
-          <SectionCard
-            title={t('settings.matchingTitle')}
-            description={t('settings.matchingDescription')}
-          >
-            <div className="grid gap-5 sm:grid-cols-2">
-              <FormField label={t('settings.minScore')}>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  className="tabular-nums"
-                  value={form.minScore}
-                  onChange={(e) => set('minScore', clamp(e.target.value, 0, 100))}
-                />
-              </FormField>
-              <FormField label={t('settings.dailyLimit')}>
-                <Input
-                  type="number"
-                  min={0}
-                  className="tabular-nums"
-                  value={form.dailyLimit}
-                  onChange={(e) => set('dailyLimit', clamp(e.target.value, 0, 100000))}
-                />
-              </FormField>
-              <FormField label={t('settings.frequency')}>
-                <Input
-                  type="number"
-                  min={1}
-                  max={168}
-                  className="tabular-nums"
-                  value={form.frequency}
-                  onChange={(e) => set('frequency', clamp(e.target.value, 1, 168))}
-                />
-              </FormField>
-              <FormField label={t('settings.concurrency')}>
-                <Input
-                  type="number"
-                  min={1}
-                  max={10}
-                  className="tabular-nums"
-                  value={form.concurrency}
-                  onChange={(e) => set('concurrency', clamp(e.target.value, 1, 10))}
-                />
-              </FormField>
-            </div>
-          </SectionCard>
+          {advanced && (
+            <SectionCard
+              title={t('settings.matchingTitle')}
+              description={t('settings.matchingDescription')}
+            >
+              <div className="grid gap-5 sm:grid-cols-2">
+                <FormField label={t('settings.minScore')}>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    className="tabular-nums"
+                    value={form.minScore}
+                    onChange={(e) => set('minScore', clamp(e.target.value, 0, 100))}
+                  />
+                </FormField>
+                <FormField label={t('settings.dailyLimit')}>
+                  <Input
+                    type="number"
+                    min={0}
+                    className="tabular-nums"
+                    value={form.dailyLimit}
+                    onChange={(e) => set('dailyLimit', clamp(e.target.value, 0, 100000))}
+                  />
+                </FormField>
+                <FormField label={t('settings.frequency')}>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={168}
+                    className="tabular-nums"
+                    value={form.frequency}
+                    onChange={(e) => set('frequency', clamp(e.target.value, 1, 168))}
+                  />
+                </FormField>
+                <FormField label={t('settings.concurrency')}>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={10}
+                    className="tabular-nums"
+                    value={form.concurrency}
+                    onChange={(e) => set('concurrency', clamp(e.target.value, 1, 10))}
+                  />
+                </FormField>
+              </div>
+            </SectionCard>
+          )}
 
           <SectionCard title={t('settings.sourcesTitle')} description={t('settings.sourcesHint')}>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -628,43 +660,45 @@ export default function Settings() {
             </div>
           </SectionCard>
 
-          <SectionCard
-            title={t('settings.integrationsTitle')}
-            description={t('settings.integrationsDescription')}
-          >
-            <div className="grid gap-5 sm:grid-cols-2">
-              <FormField label={`${t('settings.adzunaAppId')} (${t('settings.optional')})`}>
-                <Input
-                  value={form.adzunaAppId}
-                  onChange={(e) => set('adzunaAppId', e.target.value)}
-                />
-              </FormField>
-              <FormField label={t('settings.adzunaCountry')}>
-                <Input
-                  value={sources.adzunaCountry}
-                  onChange={(e) => setSources((s) => ({ ...s, adzunaCountry: e.target.value }))}
-                />
-              </FormField>
-              <FormField label={t('settings.adzunaQuery')} className="sm:col-span-2">
-                <Input
-                  value={sources.adzunaQuery}
-                  onChange={(e) => setSources((s) => ({ ...s, adzunaQuery: e.target.value }))}
-                />
-              </FormField>
-            </div>
-            <SecretField
-              label={`${t('settings.adzunaKey')} (${t('settings.optional')})`}
-              kind="adzuna"
-              last4={last4('adzuna')}
-              onChanged={secrets.reload}
-            />
-            <SecretField
-              label={`${t('settings.itjobsKey')} (${t('settings.optional')})`}
-              kind="itjobs"
-              last4={last4('itjobs')}
-              onChanged={secrets.reload}
-            />
-          </SectionCard>
+          {advanced && (
+            <SectionCard
+              title={t('settings.integrationsTitle')}
+              description={t('settings.integrationsDescription')}
+            >
+              <div className="grid gap-5 sm:grid-cols-2">
+                <FormField label={`${t('settings.adzunaAppId')} (${t('settings.optional')})`}>
+                  <Input
+                    value={form.adzunaAppId}
+                    onChange={(e) => set('adzunaAppId', e.target.value)}
+                  />
+                </FormField>
+                <FormField label={t('settings.adzunaCountry')}>
+                  <Input
+                    value={sources.adzunaCountry}
+                    onChange={(e) => setSources((s) => ({ ...s, adzunaCountry: e.target.value }))}
+                  />
+                </FormField>
+                <FormField label={t('settings.adzunaQuery')} className="sm:col-span-2">
+                  <Input
+                    value={sources.adzunaQuery}
+                    onChange={(e) => setSources((s) => ({ ...s, adzunaQuery: e.target.value }))}
+                  />
+                </FormField>
+              </div>
+              <SecretField
+                label={`${t('settings.adzunaKey')} (${t('settings.optional')})`}
+                kind="adzuna"
+                last4={last4('adzuna')}
+                onChanged={secrets.reload}
+              />
+              <SecretField
+                label={`${t('settings.itjobsKey')} (${t('settings.optional')})`}
+                kind="itjobs"
+                last4={last4('itjobs')}
+                onChanged={secrets.reload}
+              />
+            </SectionCard>
+          )}
         </>
       )}
 

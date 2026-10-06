@@ -220,3 +220,35 @@ describe('stripPii', () => {
     expect(output).toContain('Skills: TypeScript');
   });
 });
+
+describe('extractProfile', () => {
+  const extracted = {
+    skills: ['TypeScript', 'React'],
+    seniority: 'senior',
+    location: 'Porto, Portugal',
+    work_modes: ['remote'],
+    keywords: ['frontend', 'react'],
+    headline: 'Frontend engineer',
+  };
+
+  it('extracts and validates profile fields, stripping PII first', async () => {
+    const { client, requests } = scriptedClient([JSON.stringify(extracted)]);
+    const provider = createLLMProvider({ provider: 'groq' }, { fetchFn: noFetch, client });
+    const result = await provider.extractProfile(
+      'Jane\njane@example.com\nSenior React dev in Porto',
+    );
+    expect(result.profile.seniority).toBe('senior');
+    expect(result.promptVersion).toBe('profile-extract.v1');
+    expect(requests[0]!.user).not.toContain('jane@example.com');
+  });
+
+  it('repairs an invalid seniority value once', async () => {
+    const { client, requests } = scriptedClient([
+      JSON.stringify({ ...extracted, seniority: 'expert' }),
+      JSON.stringify(extracted),
+    ]);
+    const provider = createLLMProvider({ provider: 'groq' }, { fetchFn: noFetch, client });
+    expect((await provider.extractProfile('cv')).profile.skills).toEqual(['TypeScript', 'React']);
+    expect(requests).toHaveLength(2);
+  });
+});
