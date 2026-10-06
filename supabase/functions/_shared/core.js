@@ -244,8 +244,11 @@ function stripPii(text) {
 }
 
 // packages/core/src/llm/provider.ts
+function stripReasoning(text) {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^[\s\S]*?<\/think>/i, "").trim();
+}
 function extractJson(text) {
-  const trimmed = text.trim();
+  const trimmed = stripReasoning(text);
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fenced?.[1]?.trim() ?? trimmed;
   const start = candidate.indexOf("{");
@@ -307,7 +310,7 @@ ${buildRepairPrompt(first, parsed.problem)}`,
           temperature: 0.6
         })
       );
-      return { text: text.trim(), model, promptVersion: COVER_LETTER_PROMPT_VERSION };
+      return { text: stripReasoning(text), model, promptVersion: COVER_LETTER_PROMPT_VERSION };
     },
     async testConnection() {
       try {
@@ -319,7 +322,7 @@ ${buildRepairPrompt(first, parsed.problem)}`,
         });
         return {
           ok: true,
-          message: `Connected to ${config.provider} (${model}): ${reply.trim().slice(0, 40)}`
+          message: `Connected to ${config.provider} (${model}): ${stripReasoning(reply).slice(0, 40)}`
         };
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : String(error) };

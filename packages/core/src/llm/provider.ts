@@ -46,8 +46,15 @@ export interface ProviderOptions {
   client?: ChatClient;
 }
 
+export function stripReasoning(text: string): string {
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/^[\s\S]*?<\/think>/i, '')
+    .trim();
+}
+
 export function extractJson(text: string): unknown {
-  const trimmed = text.trim();
+  const trimmed = stripReasoning(text);
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = fenced?.[1]?.trim() ?? trimmed;
   const start = candidate.indexOf('{');
@@ -113,7 +120,7 @@ export function createLLMProvider(config: LLMConfig, options: ProviderOptions): 
           temperature: 0.6,
         }),
       );
-      return { text: text.trim(), model, promptVersion: COVER_LETTER_PROMPT_VERSION };
+      return { text: stripReasoning(text), model, promptVersion: COVER_LETTER_PROMPT_VERSION };
     },
 
     async testConnection() {
@@ -126,7 +133,7 @@ export function createLLMProvider(config: LLMConfig, options: ProviderOptions): 
         });
         return {
           ok: true,
-          message: `Connected to ${config.provider} (${model}): ${reply.trim().slice(0, 40)}`,
+          message: `Connected to ${config.provider} (${model}): ${stripReasoning(reply).slice(0, 40)}`,
         };
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : String(error) };

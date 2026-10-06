@@ -40,6 +40,7 @@ describe('parsing', () => {
     expect(extractJson('```json\n{"a":1}\n```')).toEqual({ a: 1 });
     expect(extractJson('Sure! {"a":1} hope it helps')).toEqual({ a: 1 });
     expect(() => extractJson('nothing here')).toThrow();
+    expect(extractJson('<think>maybe {"x": 2} is wrong</think>\n{"a":1}')).toEqual({ a: 1 });
   });
 
   it('validates score payloads', () => {
@@ -82,7 +83,9 @@ describe('createLLMProvider with a mock client', () => {
   });
 
   it('drafts a cover letter as plain text', async () => {
-    const { client, requests } = scriptedClient(['  Dear team, ...  ']);
+    const { client, requests } = scriptedClient([
+      '<think>plan the letter</think>\n  Dear team, ...  ',
+    ]);
     const provider = createLLMProvider({ provider: 'ollama' }, { fetchFn: noFetch, client });
     const letter = await provider.draftCoverLetter(makeJob(), makeProfile());
     expect(letter.text).toBe('Dear team, ...');
