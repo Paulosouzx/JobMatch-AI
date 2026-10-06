@@ -65,3 +65,7 @@ Each phase ends with a stop for validation.
 - Gemini free tier may use submitted data for training; PII stripping is heuristic and documented as such.
 - GitHub Actions cron has variable delay and public repos are paused after 60 days of inactivity.
 - Verify each source's terms and response format when building its collector (RemoteOK requires attribution).
+
+## Status
+
+All eleven phases are implemented. Deployed to the reference project: migrations and the Edge Functions `save-secret`, `test-connection` and `generate-cover-letter`.

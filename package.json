@@ -12,7 +12,9 @@
     "format:check": "prettier --check .",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "vitest run",
-    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test"
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "build:edge": "node scripts/build-edge-core.mjs",
+    "build": "pnpm --filter @jobmatch/web build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
