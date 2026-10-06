@@ -1,60 +1,99 @@
+import { Globe, MapPin, Radar, Search, SearchX, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
-import { Alert, Card, Field, Input, ScoreBadge, Select, Spinner } from '../components/legacy-ui';
-import { evaluationOf, matchOf, type EvaluationState, type JobRow } from '../lib/jobs';
-import { supabase } from '../lib/supabase';
-import { useAsync } from '../lib/useAsync';
+import { EmptyState } from '@/components/app/EmptyState';
+import { PageHeader } from '@/components/app/PageHeader';
+import { ScoreBadge } from '@/components/app/ScoreBadge';
+import { StatusBadge, type StatusTone } from '@/components/app/StatusBadge';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { evaluationOf, matchOf, type EvaluationState, type JobRow } from '@/lib/jobs';
+import { supabase } from '@/lib/supabase';
+import { useAsync } from '@/lib/useAsync';
 
 const STATUSES = ['new', 'seen', 'saved', 'applied', 'discarded'] as const;
 const EVALUATIONS: EvaluationState[] = ['scored', 'pending', 'filtered', 'error'];
-const SOURCES = ['remotive', 'arbeitnow', 'remoteok', 'greenhouse', 'lever', 'adzuna', 'itjobs'];
+const SOURCES = [
+  'remotive',
+  'arbeitnow',
+  'remoteok',
+  'netempregos',
+  'greenhouse',
+  'lever',
+  'adzuna',
+  'itjobs',
+];
+const SCORE_STEPS = ['0', '50', '70', '80', '90'];
+const ALL = 'all';
 
-const EVALUATION_STYLE: Record<EvaluationState, string> = {
-  scored: '',
-  pending: 'bg-brand-50 text-brand-700 dark:bg-brand-950 dark:text-brand-300',
-  filtered: 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300',
-  error: 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300',
+const EVALUATION_TONE: Record<EvaluationState, StatusTone> = {
+  scored: 'success',
+  pending: 'primary',
+  filtered: 'neutral',
+  error: 'danger',
 };
+
+const STATUS_TONE: Record<(typeof STATUSES)[number], StatusTone> = {
+  new: 'primary',
+  seen: 'neutral',
+  saved: 'info',
+  applied: 'success',
+  discarded: 'neutral',
+};
+
+function ListSkeleton() {
+  return (
+    <div className="divide-y rounded-xl border bg-card">
+      {Array.from({ length: 6 }, (_, index) => (
+        <div key={index} className="flex items-center gap-4 px-4 py-4">
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-2/5" />
+            <Skeleton className="h-3 w-1/4" />
+          </div>
+          <Skeleton className="h-6 w-20 rounded-full" />
+          <Skeleton className="h-7 w-11 rounded-md" />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function Jobs() {
   const { t } = useTranslation();
-  const [minScore, setMinScore] = useState(0);
-  const [source, setSource] = useState('');
-  const [status, setStatus] = useState('');
-  const [evaluation, setEvaluation] = useState<'' | EvaluationState>('');
+  const [query, setQuery] = useState('');
+  const [evaluation, setEvaluation] = useState<string>(ALL);
+  const [minScore, setMinScore] = useState('0');
+  const [source, setSource] = useState(ALL);
+  const [status, setStatus] = useState(ALL);
   const [onlyRemote, setOnlyRemote] = useState(false);
-  const [sort, setSort] = useState<'score' | 'recent'>('recent');
+  const [sort, setSort] = useState<'recent' | 'score'>('recent');
 
   const jobs = useAsync(async () => {
-    let query = supabase
+    const { data, error } = await supabase
       .from('jm_jobs')
       .select(
         'id, title, company, location, remote, source, url, posted_at, created_at, rule_status, reject_reason, jm_job_matches(id, score, status, error, analysis)',
       )
       .order('created_at', { ascending: false })
       .limit(500);
-    if (source) query = query.eq('source', source);
-    if (onlyRemote) query = query.eq('remote', true);
-    const { data, error } = await query;
     if (error) throw new Error(error.message);
     return (data ?? []) as unknown as JobRow[];
-  }, [source, onlyRemote]);
+  }, []);
 
-  const rows = useMemo(() => {
-    const list = (jobs.data ?? []).filter((row) => {
-      const match = matchOf(row);
-      const state = evaluationOf(row);
-      if (evaluation && state !== evaluation) return false;
-      if (status && (match?.status ?? '') !== status) return false;
-      if (minScore > 0 && (match?.score ?? -1) < minScore) return false;
-      return true;
-    });
-    if (sort === 'score') {
-      list.sort((a, b) => (matchOf(b)?.score ?? -1) - (matchOf(a)?.score ?? -1));
-    }
-    return list;
-  }, [jobs.data, evaluation, status, minScore, sort]);
+  const all = jobs.data ?? [];
 
   const counts = useMemo(() => {
     const result: Record<EvaluationState, number> = {
@@ -63,138 +102,271 @@ export default function Jobs() {
       filtered: 0,
       error: 0,
     };
-    for (const row of jobs.data ?? []) result[evaluationOf(row)]++;
+    for (const row of all) result[evaluationOf(row)]++;
     return result;
-  }, [jobs.data]);
+  }, [all]);
+
+  const rows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    const min = Number(minScore);
+    const list = all.filter((row) => {
+      const match = matchOf(row);
+      if (evaluation !== ALL && evaluationOf(row) !== evaluation) return false;
+      if (source !== ALL && row.source !== source) return false;
+      if (status !== ALL && match?.status !== status) return false;
+      if (onlyRemote && !row.remote) return false;
+      if (min > 0 && (match?.score ?? -1) < min) return false;
+      if (needle && !`${row.title} ${row.company}`.toLowerCase().includes(needle)) return false;
+      return true;
+    });
+    if (sort === 'score')
+      list.sort((a, b) => (matchOf(b)?.score ?? -1) - (matchOf(a)?.score ?? -1));
+    return list;
+  }, [all, query, evaluation, source, status, onlyRemote, minScore, sort]);
+
+  const filtersActive =
+    query !== '' ||
+    evaluation !== ALL ||
+    source !== ALL ||
+    status !== ALL ||
+    onlyRemote ||
+    minScore !== '0';
+
+  function clearFilters() {
+    setQuery('');
+    setEvaluation(ALL);
+    setSource(ALL);
+    setStatus(ALL);
+    setOnlyRemote(false);
+    setMinScore('0');
+  }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <h1 className="text-2xl font-semibold">{t('jobs.title')}</h1>
-        {jobs.data && (
-          <p className="text-sm text-slate-500 tabular-nums">
-            {t('jobs.counts', { total: jobs.data.length, ...counts })}
-          </p>
-        )}
+    <div className="space-y-6">
+      <PageHeader
+        title={t('jobs.title')}
+        description={
+          jobs.data && all.length > 0
+            ? t('jobs.counts', { total: all.length, ...counts })
+            : t('jobs.pageDescription')
+        }
+      />
+
+      <div className="space-y-3">
+        <Tabs value={evaluation} onValueChange={setEvaluation}>
+          <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value={ALL} className="gap-2">
+              {t('jobs.allEvaluations')}
+              <Badge variant="secondary" className="tabular-nums">
+                {all.length}
+              </Badge>
+            </TabsTrigger>
+            {EVALUATIONS.map((item) => (
+              <TabsTrigger key={item} value={item} className="gap-2">
+                {t(`jobs.evaluations.${item}`)}
+                <Badge variant="secondary" className="tabular-nums">
+                  {counts[item]}
+                </Badge>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={t('jobs.searchPlaceholder')}
+              aria-label={t('jobs.searchPlaceholder')}
+              className="pl-9"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <Select value={minScore} onValueChange={setMinScore}>
+              <SelectTrigger className="w-full sm:w-40" aria-label={t('jobs.minScore')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SCORE_STEPS.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {value === '0' ? t('jobs.anyScore') : t('jobs.scoreAtLeast', { value })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={source} onValueChange={setSource}>
+              <SelectTrigger className="w-full sm:w-40" aria-label={t('jobs.source')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>{t('jobs.allSources')}</SelectItem>
+                {SOURCES.map((item) => (
+                  <SelectItem key={item} value={item} className="capitalize">
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="w-full sm:w-44" aria-label={t('jobs.status')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL}>{t('jobs.allStatuses')}</SelectItem>
+                {STATUSES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {t(`jobs.statuses.${item}`)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={sort} onValueChange={(value) => setSort(value as 'recent' | 'score')}>
+              <SelectTrigger className="w-full sm:w-40" aria-label={t('jobs.sort')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recent">{t('jobs.sortRecent')}</SelectItem>
+                <SelectItem value="score">{t('jobs.sortScore')}</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="col-span-2 flex h-9 items-center gap-2 rounded-md border px-3 sm:col-span-1">
+              <Switch id="only-remote" checked={onlyRemote} onCheckedChange={setOnlyRemote} />
+              <Label htmlFor="only-remote" className="font-normal">
+                {t('jobs.onlyRemote')}
+              </Label>
+            </div>
+            {filtersActive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFilters}
+                className="col-span-2 sm:col-span-1"
+              >
+                <X />
+                {t('jobs.clearFilters')}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
-      <Card className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
-        <Field label={t('jobs.evaluation')}>
-          <Select
-            value={evaluation}
-            onChange={(e) => setEvaluation(e.target.value as '' | EvaluationState)}
-          >
-            <option value="">{t('jobs.all')}</option>
-            {EVALUATIONS.map((item) => (
-              <option key={item} value={item}>
-                {t(`jobs.evaluations.${item}`)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label={t('jobs.minScore')}>
-          <Input
-            type="number"
-            min={0}
-            max={100}
-            value={minScore}
-            onChange={(e) => setMinScore(Number(e.target.value) || 0)}
-          />
-        </Field>
-        <Field label={t('jobs.source')}>
-          <Select value={source} onChange={(e) => setSource(e.target.value)}>
-            <option value="">{t('jobs.all')}</option>
-            {SOURCES.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label={t('jobs.status')}>
-          <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-            <option value="">{t('jobs.all')}</option>
-            {STATUSES.map((item) => (
-              <option key={item} value={item}>
-                {t(`jobs.statuses.${item}`)}
-              </option>
-            ))}
-          </Select>
-        </Field>
-        <Field label={t('jobs.sort')}>
-          <Select value={sort} onChange={(e) => setSort(e.target.value as 'score' | 'recent')}>
-            <option value="recent">{t('jobs.sortRecent')}</option>
-            <option value="score">{t('jobs.sortScore')}</option>
-          </Select>
-        </Field>
-        <label className="flex items-end gap-2 pb-2 text-sm">
-          <input
-            type="checkbox"
-            checked={onlyRemote}
-            onChange={(e) => setOnlyRemote(e.target.checked)}
-          />
-          {t('jobs.onlyRemote')}
-        </label>
-      </Card>
+      {jobs.loading && <ListSkeleton />}
+      {jobs.error && (
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+        >
+          {jobs.error}
+        </p>
+      )}
 
-      {jobs.loading && <Spinner label={t('common.loading')} />}
-      {jobs.error && <Alert>{jobs.error}</Alert>}
-      {jobs.data && rows.length === 0 && <Card>{t('jobs.empty')}</Card>}
+      {jobs.data && all.length === 0 && (
+        <EmptyState
+          icon={Radar}
+          title={t('jobs.emptyTitle')}
+          description={t('jobs.emptyText')}
+          action={
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button asChild size="sm">
+                <Link to="/app/settings">{t('jobs.goSettings')}</Link>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link to="/app/runs">{t('jobs.goRuns')}</Link>
+              </Button>
+            </div>
+          }
+        />
+      )}
 
-      <ul className="space-y-3">
-        {rows.map((row) => {
-          const match = matchOf(row);
-          const state = evaluationOf(row);
-          return (
-            <li key={row.id}>
-              <Link
-                to={`/app/jobs/${row.id}`}
-                className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-brand-400 dark:border-slate-800 dark:bg-slate-900"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{row.title}</p>
-                    <p className="text-sm text-slate-500">
-                      {row.company}
-                      {row.location ? ` · ${row.location}` : ''}
-                      {row.remote ? ` · ${t('jobs.remote')}` : ''}
-                    </p>
+      {jobs.data && all.length > 0 && rows.length === 0 && (
+        <EmptyState
+          icon={SearchX}
+          title={t('jobs.noResultsTitle')}
+          description={t('jobs.noResultsText')}
+          action={
+            <Button size="sm" variant="outline" onClick={clearFilters}>
+              {t('jobs.clearFilters')}
+            </Button>
+          }
+        />
+      )}
+
+      {rows.length > 0 && (
+        <ul className="divide-y overflow-hidden rounded-xl border bg-card">
+          {rows.map((row) => {
+            const match = matchOf(row);
+            const state = evaluationOf(row);
+            return (
+              <li key={row.id}>
+                <Link
+                  to={`/app/jobs/${row.id}`}
+                  className="flex items-start gap-4 px-4 py-4 transition-colors hover:bg-accent/60 focus-visible:bg-accent/60 focus-visible:outline-none sm:items-center"
+                >
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <p className="truncate font-medium text-foreground">{row.title}</p>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span className="font-medium text-foreground/80">{row.company}</span>
+                      {row.location && (
+                        <span className="inline-flex items-center gap-1">
+                          <MapPin className="size-3.5" aria-hidden="true" />
+                          {row.location}
+                        </span>
+                      )}
+                      {row.remote && (
+                        <span className="inline-flex items-center gap-1">
+                          <Globe className="size-3.5" aria-hidden="true" />
+                          {t('jobs.remote')}
+                        </span>
+                      )}
+                      <span className="capitalize">{row.source}</span>
+                      <span className="tabular-nums">
+                        {t('jobs.collectedOn', {
+                          date: new Date(row.created_at).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short',
+                          }),
+                        })}
+                      </span>
+                    </div>
+                    {match?.analysis?.summary && (
+                      <p className="line-clamp-1 text-sm text-muted-foreground">
+                        {match.analysis.summary}
+                      </p>
+                    )}
+                    {state === 'filtered' && row.reject_reason && (
+                      <p className="text-xs text-muted-foreground">
+                        {t('jobs.filteredBy', { reason: row.reject_reason })}
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    {match && (
-                      <span className="text-xs text-slate-500">
-                        {t(`jobs.statuses.${match.status}`)}
-                      </span>
-                    )}
-                    {state === 'scored' ? (
-                      <ScoreBadge score={match?.score ?? null} />
-                    ) : (
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${EVALUATION_STYLE[state]}`}
+                    {match && state === 'scored' && (
+                      <StatusBadge
+                        tone={STATUS_TONE[match.status]}
+                        className="hidden sm:inline-flex"
                       >
+                        {t(`jobs.statuses.${match.status}`)}
+                      </StatusBadge>
+                    )}
+                    {state === 'scored' && match?.score !== null && match?.score !== undefined ? (
+                      <ScoreBadge score={match.score} />
+                    ) : (
+                      <StatusBadge tone={EVALUATION_TONE[state]}>
                         {t(`jobs.evaluations.${state}`)}
-                      </span>
+                      </StatusBadge>
                     )}
                   </div>
-                </div>
-                {match?.analysis?.summary && (
-                  <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                    {match.analysis.summary}
-                  </p>
-                )}
-                {state === 'filtered' && row.reject_reason && (
-                  <p className="mt-2 text-xs text-slate-500">
-                    {t('jobs.filteredBy', { reason: row.reject_reason })}
-                  </p>
-                )}
-                <p className="mt-2 text-xs text-slate-400">
-                  {row.source} · {new Date(row.created_at).toLocaleDateString('pt-BR')}
-                </p>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 }

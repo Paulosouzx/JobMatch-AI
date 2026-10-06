@@ -4,6 +4,7 @@ import {
   greenhouseCollector,
   itJobsCollector,
   leverCollector,
+  netEmpregosCollector,
   remoteOkCollector,
   remotiveCollector,
   type CollectResult,
@@ -16,7 +17,7 @@ export interface SecretsLookup {
   itjobsKey: string | null;
 }
 
-const DEFAULT_ENABLED = ['remotive', 'arbeitnow', 'remoteok'];
+const DEFAULT_ENABLED = ['remotive', 'arbeitnow', 'remoteok', 'netempregos'];
 
 function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
@@ -54,6 +55,10 @@ export function buildCollectTasks(
   }
   if (isEnabled('arbeitnow')) {
     tasks.push({ id: 'arbeitnow', run: (f) => arbeitnowCollector.collect({}, f) });
+  }
+  if (isEnabled('netempregos')) {
+    const categories = stringList(configOf('netempregos').categories);
+    tasks.push({ id: 'netempregos', run: (f) => netEmpregosCollector.collect({ categories }, f) });
   }
   if (isEnabled('remoteok')) {
     tasks.push({ id: 'remoteok', run: (f) => remoteOkCollector.collect({}, f) });

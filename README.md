@@ -33,7 +33,7 @@ flowchart LR
   EF --> L
 ```
 
-Pipeline per run: **collect** (Remotive, Arbeitnow, RemoteOK, Greenhouse, Lever, optional Adzuna and ITJobs.pt) → **normalize** → **dedupe** (by `source + external id` and by a title/company hash across sources) → **rule filter** (free, no LLM) → **LLM score** → **notify** with Web Push → **log the run**.
+Pipeline per run: **collect** (Remotive, Arbeitnow, RemoteOK, Net-Empregos RSS, Greenhouse, Lever, optional Adzuna and ITJobs.pt) → **normalize** → **dedupe** (by `source + external id` and by a title/company hash across sources) → **rule filter** (free, no LLM) → **LLM score** → **notify** with Web Push → **log the run**.
 
 ## Repository layout
 
@@ -82,6 +82,7 @@ The worker falls back to `LLM_API_KEY` when no key is saved in the database (use
 - **Gemini free tier may use submitted data to improve Google's models.** Do not send anything you consider confidential. Use a paid key, Groq, OpenRouter or a local Ollama if that matters to you.
 - CV sanitization (email, phone, address) is heuristic and does not guarantee that all personal data is removed.
 - **Web Push** is free and works in Chrome, Edge, Firefox and Safari. Notifications are per device and stop if the browser revokes the subscription; expired subscriptions are removed automatically.
+- **LinkedIn and Indeed are not supported**: neither offers a free public jobs API (Indeed retired its RSS feeds) and both forbid scraping in their terms of service.
 - **Job sources**: Remotive asks clients to poll sparingly, and RemoteOK requires linking back to the source. Respect each source's terms.
 
 ## License

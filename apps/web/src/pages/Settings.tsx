@@ -1,21 +1,31 @@
+import { CircleCheck, KeyRound, Loader2, PlugZap, Plus, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { InstallAppCard } from '../components/InstallAppCard';
-import { PushSettings } from '../components/PushSettings';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/app/ConfirmDialog';
+import { FormField } from '@/components/app/FormField';
+import { PageHeader } from '@/components/app/PageHeader';
+import { InstallAppCard } from '@/components/InstallAppCard';
+import { PushSettings } from '@/components/PushSettings';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
-  Alert,
-  Button,
-  Card,
-  Field,
-  Input,
   Select,
-  Spinner,
-  Textarea,
-} from '../components/legacy-ui';
-import { useAuth } from '../lib/auth';
-import { formatList, parseList } from '../lib/lists';
-import { supabase } from '../lib/supabase';
-import { useAsync } from '../lib/useAsync';
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/lib/auth';
+import { callFunction } from '@/lib/functions';
+import { formatList, parseList } from '@/lib/lists';
+import { supabase } from '@/lib/supabase';
+import { useAsync } from '@/lib/useAsync';
 
 type SecretKind = 'llm' | 'adzuna' | 'itjobs';
 
@@ -26,7 +36,16 @@ const DEFAULT_MODELS: Record<(typeof PROVIDERS)[number], string> = {
   openrouter: 'meta-llama/llama-3.3-70b-instruct:free',
   ollama: 'llama3.1',
 };
-const FREE_SOURCES = ['remotive', 'arbeitnow', 'remoteok'] as const;
+const SOURCE_TYPES = [
+  'remotive',
+  'arbeitnow',
+  'remoteok',
+  'netempregos',
+  'greenhouse',
+  'lever',
+  'adzuna',
+  'itjobs',
+] as const;
 
 interface SettingsForm {
   provider: (typeof PROVIDERS)[number];
@@ -43,6 +62,7 @@ interface SourcesForm {
   enabled: Record<string, boolean>;
   greenhouse: string;
   lever: string;
+  netempregos: string;
   adzunaCountry: string;
   adzunaQuery: string;
   itjobsQuery: string;
@@ -60,21 +80,44 @@ const EMPTY_SETTINGS: SettingsForm = {
 };
 
 const EMPTY_SOURCES: SourcesForm = {
-  enabled: {
-    remotive: true,
-    arbeitnow: true,
-    remoteok: true,
-    greenhouse: true,
-    lever: true,
-    adzuna: true,
-    itjobs: true,
-  },
+  enabled: Object.fromEntries(SOURCE_TYPES.map((type) => [type, true])),
   greenhouse: '',
   lever: '',
+  netempregos: '',
   adzunaCountry: 'pt',
   adzunaQuery: '',
   itjobsQuery: '',
 };
+
+function asStrings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+}
+
+function clamp(raw: string, min: number, max: number): number {
+  const value = Number.parseInt(raw, 10);
+  if (Number.isNaN(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
+function SectionCard({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card className="gap-0 py-0">
+      <CardHeader className="border-b py-5">
+        <CardTitle className="text-base">{title}</CardTitle>
+        {description && <CardDescription>{description}</CardDescription>}
+      </CardHeader>
+      <CardContent className="space-y-5 py-6">{children}</CardContent>
+    </Card>
+  );
+}
 
 function SecretField({
   label,
@@ -93,74 +136,108 @@ function SecretField({
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function call(body: Record<string, unknown>) {
-    setBusy(true);
-    setError(null);
-    const { data, error: failure } = await supabase.functions.invoke('save-secret', { body });
-    setBusy(false);
-    if (failure || (data && typeof data === 'object' && 'error' in data)) {
-      setError(t('common.error'));
-      return false;
-    }
-    return true;
-  }
 
   async function save() {
-    if (await call({ kind, action: 'set', value })) {
-      setValue('');
-      setEditing(false);
-      onChanged();
+    setBusy(true);
+    const { error } = await callFunction('save-secret', { kind, action: 'set', value });
+    setBusy(false);
+    if (error) {
+      toast.error(t('settings.secretSaveError'), { description: error });
+      return;
     }
+    toast.success(t('settings.secretSaved', { label }));
+    setValue('');
+    setEditing(false);
+    onChanged();
   }
 
   async function remove() {
-    if (await call({ kind, action: 'delete' })) onChanged();
+    const { error } = await callFunction('save-secret', { kind, action: 'delete' });
+    if (error) {
+      toast.error(t('settings.secretRemoveError'), { description: error });
+      return;
+    }
+    toast.success(t('settings.secretRemoved', { label }));
+    onChanged();
   }
 
   const showInput = editing || last4 === null;
 
   return (
-    <div className="space-y-1.5">
-      <span className="text-sm font-medium">{label}</span>
+    <div className="grid gap-2">
+      <Label>{label}</Label>
       {showInput ? (
-        <div className="flex gap-2">
-          <Input
-            type="password"
-            autoComplete="off"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            aria-label={label}
-          />
-          <Button
-            type="button"
-            disabled={busy || value.trim().length < 4}
-            onClick={() => void save()}
-          >
-            {t('common.save')}
-          </Button>
-          {editing && (
-            <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
-              {t('common.cancel')}
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <KeyRound
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              type="password"
+              autoComplete="off"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              aria-label={label}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="success"
+              disabled={busy || value.trim().length < 4}
+              onClick={() => void save()}
+            >
+              {busy ? <Loader2 className="animate-spin" /> : <Plus />}
+              {t('settings.addKey')}
             </Button>
-          )}
+            {editing && (
+              <Button type="button" variant="ghost" onClick={() => setEditing(false)}>
+                {t('common.cancel')}
+              </Button>
+            )}
+          </div>
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <code className="rounded-lg bg-slate-100 px-3 py-2 text-sm dark:bg-slate-800">
+          <span className="inline-flex h-9 items-center gap-2 rounded-md border bg-muted/50 px-3 font-mono text-sm">
+            <CircleCheck className="size-4 text-success" aria-hidden="true" />
             ••••{last4}
-          </code>
-          <Button type="button" variant="secondary" onClick={() => setEditing(true)}>
+          </span>
+          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
             {t('common.replace')}
           </Button>
-          <Button type="button" variant="ghost" disabled={busy} onClick={() => void remove()}>
-            {t('common.remove')}
-          </Button>
+          <ConfirmDialog
+            trigger={
+              <Button type="button" variant="destructive-outline">
+                <Trash2 />
+                {t('common.remove')}
+              </Button>
+            }
+            title={t('settings.removeKeyTitle', { label })}
+            description={t('settings.removeKeyText')}
+            confirmLabel={t('common.remove')}
+            cancelLabel={t('common.cancel')}
+            onConfirm={remove}
+          />
         </div>
       )}
-      {helpText && <p className="text-xs text-slate-500">{helpText}</p>}
-      {error && <Alert>{error}</Alert>}
+      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+    </div>
+  );
+}
+
+function SettingsSkeleton() {
+  return (
+    <div className="space-y-6">
+      {Array.from({ length: 3 }, (_, index) => (
+        <div key={index} className="space-y-4 rounded-xl border p-6">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-2/3" />
+        </div>
+      ))}
     </div>
   );
 }
@@ -172,11 +249,7 @@ export default function Settings() {
   const [form, setForm] = useState<SettingsForm>(EMPTY_SETTINGS);
   const [sources, setSources] = useState<SourcesForm>(EMPTY_SOURCES);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{
-    kind: 'success' | 'error' | 'info';
-    text: string;
-  } | null>(null);
-  const [testing, setTesting] = useState<'llm' | null>(null);
+  const [testing, setTesting] = useState(false);
 
   const loaded = useAsync(async () => {
     const [settings, sourceRows] = await Promise.all([
@@ -216,6 +289,8 @@ export default function Settings() {
       if (source.type === 'greenhouse')
         next.greenhouse = formatList(asStrings(config.companies), '\n');
       if (source.type === 'lever') next.lever = formatList(asStrings(config.companies), '\n');
+      if (source.type === 'netempregos')
+        next.netempregos = formatList(asStrings(config.categories), '\n');
       if (source.type === 'adzuna') {
         next.adzunaCountry = typeof config.country === 'string' ? config.country : 'pt';
         next.adzunaQuery = typeof config.what === 'string' ? config.what : '';
@@ -232,7 +307,7 @@ export default function Settings() {
   const set = <K extends keyof SettingsForm>(key: K, value: SettingsForm[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
-  async function persist(): Promise<boolean> {
+  async function persist(): Promise<string | null> {
     const settingsResult = await supabase
       .from('jm_settings')
       .update({
@@ -246,12 +321,10 @@ export default function Settings() {
         llm_concurrency: form.concurrency,
       })
       .eq('user_id', userId);
-    if (settingsResult.error) {
-      setMessage({ kind: 'error', text: settingsResult.error.message });
-      return false;
-    }
+    if (settingsResult.error) return settingsResult.error.message;
     const rows = [
       ...['remotive', 'arbeitnow', 'remoteok'].map((type) => ({ type, config: {} })),
+      { type: 'netempregos', config: { categories: parseList(sources.netempregos) } },
       { type: 'greenhouse', config: { companies: parseList(sources.greenhouse) } },
       { type: 'lever', config: { companies: parseList(sources.lever) } },
       {
@@ -263,229 +336,277 @@ export default function Settings() {
     const sourcesResult = await supabase
       .from('jm_sources')
       .upsert(rows, { onConflict: 'user_id,type' });
-    if (sourcesResult.error) {
-      setMessage({ kind: 'error', text: sourcesResult.error.message });
-      return false;
-    }
-    return true;
+    return sourcesResult.error ? sourcesResult.error.message : null;
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setSaving(true);
-    setMessage(null);
-    const ok = await persist();
+    const error = await persist();
     setSaving(false);
-    if (ok) setMessage({ kind: 'success', text: t('common.saved') });
+    if (error) toast.error(t('settings.saveError'), { description: error });
+    else toast.success(t('settings.saved'));
   }
 
-  async function runTest(target: 'llm') {
-    setTesting(target);
-    setMessage(null);
-    if (await persist()) {
-      const { data, error } = await supabase.functions.invoke('test-connection', {
-        body: { target },
-      });
-      if (error || !data) setMessage({ kind: 'error', text: t('common.error') });
-      else setMessage({ kind: data.ok ? 'success' : 'error', text: String(data.message) });
+  async function testConnection() {
+    setTesting(true);
+    const id = toast.loading(t('settings.testing'));
+    const saveError = await persist();
+    if (saveError) {
+      setTesting(false);
+      toast.error(t('settings.saveError'), { id, description: saveError });
+      return;
     }
-    setTesting(null);
+    const { data, error } = await callFunction<{ ok: boolean; message: string }>(
+      'test-connection',
+      {
+        target: 'llm',
+      },
+    );
+    setTesting(false);
+    if (error || !data) {
+      toast.error(t('settings.testFailed'), { id, description: error ?? t('common.error') });
+    } else if (data.ok) {
+      toast.success(t('settings.testOk'), { id, description: data.message });
+    } else {
+      toast.error(t('settings.testFailed'), { id, description: data.message });
+    }
   }
-
-  if (loaded.loading) return <Spinner label={t('common.loading')} />;
 
   const isOllama = form.provider === 'ollama';
+  const toggleSource = (type: string, value: boolean) =>
+    setSources((s) => ({ ...s, enabled: { ...s.enabled, [type]: value } }));
 
   return (
-    <form onSubmit={onSubmit} className="max-w-3xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t('settings.title')}</h1>
-      {loaded.error && <Alert>{loaded.error}</Alert>}
+    <form onSubmit={onSubmit} className="mx-auto w-full max-w-3xl space-y-6 pb-24">
+      <PageHeader title={t('settings.title')} description={t('settings.description')} />
 
-      <Card className="space-y-4">
-        <h2 className="font-semibold">{t('settings.llmTitle')}</h2>
-        <Alert kind="info">{t('settings.privacyNote')}</Alert>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('settings.provider')}>
-            <Select
-              value={form.provider}
-              onChange={(e) => set('provider', e.target.value as SettingsForm['provider'])}
-            >
-              {PROVIDERS.map((provider) => (
-                <option key={provider} value={provider}>
-                  {provider}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field
-            label={t('settings.model')}
-            hint={`${t('settings.modelHint')}: ${DEFAULT_MODELS[form.provider]}`}
-          >
-            <Input
-              value={form.model}
-              onChange={(e) => set('model', e.target.value)}
-              placeholder={DEFAULT_MODELS[form.provider]}
-            />
-          </Field>
-        </div>
-        {isOllama ? (
-          <Field label={t('settings.baseUrl')}>
-            <Input
-              value={form.baseUrl}
-              onChange={(e) => set('baseUrl', e.target.value)}
-              placeholder="http://localhost:11434"
-            />
-          </Field>
-        ) : (
-          <SecretField
-            label={t('settings.apiKey')}
-            kind="llm"
-            last4={last4('llm')}
-            onChanged={secrets.reload}
-            helpText={t('settings.secretHelp')}
-          />
-        )}
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={testing !== null}
-          onClick={() => void runTest('llm')}
+      {loaded.error && (
+        <p
+          role="alert"
+          className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
         >
-          {testing === 'llm' ? t('settings.testing') : t('settings.testConnection')}
-        </Button>
-      </Card>
+          {loaded.error}
+        </p>
+      )}
 
-      <InstallAppCard />
+      {loaded.loading ? (
+        <SettingsSkeleton />
+      ) : (
+        <>
+          <InstallAppCard />
 
-      <PushSettings />
-
-      <Card className="space-y-4">
-        <h2 className="font-semibold">{t('settings.integrationsTitle')}</h2>
-        <Field label={`${t('settings.adzunaAppId')} (${t('settings.optional')})`}>
-          <Input value={form.adzunaAppId} onChange={(e) => set('adzunaAppId', e.target.value)} />
-        </Field>
-        <SecretField
-          label={`${t('settings.adzunaKey')} (${t('settings.optional')})`}
-          kind="adzuna"
-          last4={last4('adzuna')}
-          onChanged={secrets.reload}
-        />
-        <SecretField
-          label={`${t('settings.itjobsKey')} (${t('settings.optional')})`}
-          kind="itjobs"
-          last4={last4('itjobs')}
-          onChanged={secrets.reload}
-        />
-      </Card>
-
-      <Card className="space-y-4">
-        <h2 className="font-semibold">{t('settings.sourcesTitle')}</h2>
-        <p className="text-sm text-slate-500">{t('settings.sourcesHint')}</p>
-        <div className="flex flex-wrap gap-4">
-          {[...FREE_SOURCES, 'greenhouse', 'lever', 'adzuna', 'itjobs'].map((type) => (
-            <label key={type} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={sources.enabled[type] ?? true}
-                onChange={(e) =>
-                  setSources((s) => ({ ...s, enabled: { ...s.enabled, [type]: e.target.checked } }))
-                }
+          <SectionCard title={t('settings.llmTitle')} description={t('settings.llmDescription')}>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField label={t('settings.provider')}>
+                <Select
+                  value={form.provider}
+                  onValueChange={(value) => set('provider', value as SettingsForm['provider'])}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROVIDERS.map((provider) => (
+                      <SelectItem key={provider} value={provider} className="capitalize">
+                        {provider}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+              <FormField
+                label={t('settings.model')}
+                description={`${t('settings.modelHint')}: ${DEFAULT_MODELS[form.provider]}`}
+              >
+                <Input
+                  value={form.model}
+                  onChange={(e) => set('model', e.target.value)}
+                  placeholder={DEFAULT_MODELS[form.provider]}
+                />
+              </FormField>
+            </div>
+            {isOllama ? (
+              <FormField label={t('settings.baseUrl')}>
+                <Input
+                  value={form.baseUrl}
+                  onChange={(e) => set('baseUrl', e.target.value)}
+                  placeholder="http://localhost:11434"
+                />
+              </FormField>
+            ) : (
+              <SecretField
+                label={t('settings.apiKey')}
+                kind="llm"
+                last4={last4('llm')}
+                onChanged={secrets.reload}
+                helpText={t('settings.secretHelp')}
               />
-              {type}
-            </label>
-          ))}
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('settings.greenhouseCompanies')}>
-            <Textarea
-              rows={3}
-              value={sources.greenhouse}
-              onChange={(e) => setSources((s) => ({ ...s, greenhouse: e.target.value }))}
-            />
-          </Field>
-          <Field label={t('settings.leverCompanies')}>
-            <Textarea
-              rows={3}
-              value={sources.lever}
-              onChange={(e) => setSources((s) => ({ ...s, lever: e.target.value }))}
-            />
-          </Field>
-          <Field label={t('settings.adzunaCountry')}>
-            <Input
-              value={sources.adzunaCountry}
-              onChange={(e) => setSources((s) => ({ ...s, adzunaCountry: e.target.value }))}
-            />
-          </Field>
-          <Field label={t('settings.adzunaQuery')}>
-            <Input
-              value={sources.adzunaQuery}
-              onChange={(e) => setSources((s) => ({ ...s, adzunaQuery: e.target.value }))}
-            />
-          </Field>
-          <Field label={t('settings.itjobsQuery')}>
-            <Input
-              value={sources.itjobsQuery}
-              onChange={(e) => setSources((s) => ({ ...s, itjobsQuery: e.target.value }))}
-            />
-          </Field>
-        </div>
-      </Card>
+            )}
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3">
+              <p className="text-xs text-muted-foreground">{t('settings.privacyNote')}</p>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={testing}
+                onClick={() => void testConnection()}
+              >
+                {testing ? <Loader2 className="animate-spin" /> : <PlugZap />}
+                {testing ? t('settings.testing') : t('settings.testConnection')}
+              </Button>
+            </div>
+          </SectionCard>
 
-      <Card className="space-y-4">
-        <h2 className="font-semibold">{t('settings.matchingTitle')}</h2>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={t('settings.minScore')}>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              value={form.minScore}
-              onChange={(e) => set('minScore', clamp(e.target.value, 0, 100))}
-            />
-          </Field>
-          <Field label={t('settings.dailyLimit')}>
-            <Input
-              type="number"
-              min={0}
-              value={form.dailyLimit}
-              onChange={(e) => set('dailyLimit', clamp(e.target.value, 0, 100000))}
-            />
-          </Field>
-          <Field label={t('settings.frequency')}>
-            <Input
-              type="number"
-              min={1}
-              max={168}
-              value={form.frequency}
-              onChange={(e) => set('frequency', clamp(e.target.value, 1, 168))}
-            />
-          </Field>
-          <Field label={t('settings.concurrency')}>
-            <Input
-              type="number"
-              min={1}
-              max={10}
-              value={form.concurrency}
-              onChange={(e) => set('concurrency', clamp(e.target.value, 1, 10))}
-            />
-          </Field>
-        </div>
-      </Card>
+          <PushSettings />
 
-      {message && <Alert kind={message.kind}>{message.text}</Alert>}
-      <Button type="submit" disabled={saving}>
-        {t('common.save')}
-      </Button>
+          <SectionCard
+            title={t('settings.matchingTitle')}
+            description={t('settings.matchingDescription')}
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField label={t('settings.minScore')}>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="tabular-nums"
+                  value={form.minScore}
+                  onChange={(e) => set('minScore', clamp(e.target.value, 0, 100))}
+                />
+              </FormField>
+              <FormField label={t('settings.dailyLimit')}>
+                <Input
+                  type="number"
+                  min={0}
+                  className="tabular-nums"
+                  value={form.dailyLimit}
+                  onChange={(e) => set('dailyLimit', clamp(e.target.value, 0, 100000))}
+                />
+              </FormField>
+              <FormField label={t('settings.frequency')}>
+                <Input
+                  type="number"
+                  min={1}
+                  max={168}
+                  className="tabular-nums"
+                  value={form.frequency}
+                  onChange={(e) => set('frequency', clamp(e.target.value, 1, 168))}
+                />
+              </FormField>
+              <FormField label={t('settings.concurrency')}>
+                <Input
+                  type="number"
+                  min={1}
+                  max={10}
+                  className="tabular-nums"
+                  value={form.concurrency}
+                  onChange={(e) => set('concurrency', clamp(e.target.value, 1, 10))}
+                />
+              </FormField>
+            </div>
+          </SectionCard>
+
+          <SectionCard title={t('settings.sourcesTitle')} description={t('settings.sourcesHint')}>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {SOURCE_TYPES.map((type) => (
+                <div
+                  key={type}
+                  className="flex items-center justify-between rounded-lg border px-3 py-2.5"
+                >
+                  <Label htmlFor={`source-${type}`} className="font-normal capitalize">
+                    {t(`settings.sourceNames.${type}`)}
+                  </Label>
+                  <Switch
+                    id={`source-${type}`}
+                    checked={sources.enabled[type] ?? true}
+                    onCheckedChange={(value) => toggleSource(type, value)}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField
+                label={t('settings.netempregosCategories')}
+                description={t('settings.netempregosHint')}
+              >
+                <Textarea
+                  rows={3}
+                  value={sources.netempregos}
+                  onChange={(e) => setSources((s) => ({ ...s, netempregos: e.target.value }))}
+                />
+              </FormField>
+              <FormField label={t('settings.greenhouseCompanies')}>
+                <Textarea
+                  rows={3}
+                  value={sources.greenhouse}
+                  onChange={(e) => setSources((s) => ({ ...s, greenhouse: e.target.value }))}
+                />
+              </FormField>
+              <FormField label={t('settings.leverCompanies')}>
+                <Textarea
+                  rows={3}
+                  value={sources.lever}
+                  onChange={(e) => setSources((s) => ({ ...s, lever: e.target.value }))}
+                />
+              </FormField>
+              <FormField label={t('settings.itjobsQuery')}>
+                <Input
+                  value={sources.itjobsQuery}
+                  onChange={(e) => setSources((s) => ({ ...s, itjobsQuery: e.target.value }))}
+                />
+              </FormField>
+            </div>
+          </SectionCard>
+
+          <SectionCard
+            title={t('settings.integrationsTitle')}
+            description={t('settings.integrationsDescription')}
+          >
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FormField label={`${t('settings.adzunaAppId')} (${t('settings.optional')})`}>
+                <Input
+                  value={form.adzunaAppId}
+                  onChange={(e) => set('adzunaAppId', e.target.value)}
+                />
+              </FormField>
+              <FormField label={t('settings.adzunaCountry')}>
+                <Input
+                  value={sources.adzunaCountry}
+                  onChange={(e) => setSources((s) => ({ ...s, adzunaCountry: e.target.value }))}
+                />
+              </FormField>
+              <FormField label={t('settings.adzunaQuery')} className="sm:col-span-2">
+                <Input
+                  value={sources.adzunaQuery}
+                  onChange={(e) => setSources((s) => ({ ...s, adzunaQuery: e.target.value }))}
+                />
+              </FormField>
+            </div>
+            <SecretField
+              label={`${t('settings.adzunaKey')} (${t('settings.optional')})`}
+              kind="adzuna"
+              last4={last4('adzuna')}
+              onChanged={secrets.reload}
+            />
+            <SecretField
+              label={`${t('settings.itjobsKey')} (${t('settings.optional')})`}
+              kind="itjobs"
+              last4={last4('itjobs')}
+              onChanged={secrets.reload}
+            />
+          </SectionCard>
+        </>
+      )}
+
+      <div className="sticky bottom-0 z-10 -mx-4 border-t bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:mx-0 sm:rounded-xl sm:border">
+        <div className="flex items-center justify-between gap-3">
+          <p className="hidden text-xs text-muted-foreground sm:block">{t('settings.saveHint')}</p>
+          <Button type="submit" disabled={saving || loaded.loading} className="w-full sm:w-auto">
+            {saving ? <Loader2 className="animate-spin" /> : <Save />}
+            {saving ? t('ui.saving') : t('settings.saveAll')}
+          </Button>
+        </div>
+      </div>
     </form>
   );
-}
-
-function asStrings(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
-}
-
-function clamp(raw: string, min: number, max: number): number {
-  const value = Number.parseInt(raw, 10);
-  if (Number.isNaN(value)) return min;
-  return Math.min(max, Math.max(min, value));
 }

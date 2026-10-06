@@ -30,7 +30,7 @@ export function FormField({
     : children;
 
   return (
-    <div className={cn('grid gap-2', className)}>
+    <div className={cn('grid content-start gap-2', className)}>
       <Label htmlFor={id} className={cn(error && 'text-destructive')}>
         {label}
       </Label>

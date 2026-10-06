@@ -90,3 +90,21 @@ describe('normalizers with real fixtures', () => {
     expect(normalizeLever({}, 'x')).toBeNull();
   });
 });
+
+describe('Net-Empregos RSS', () => {
+  it('parses items from the real feed fixture', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { normalizeNetEmpregos, parseNetEmpregosFeed } = await import('./index');
+    const xml = readFileSync(new URL('../__fixtures__/netempregos.xml', import.meta.url), 'utf8');
+    const items = parseNetEmpregosFeed(xml).map(normalizeNetEmpregos);
+    expect(items).toHaveLength(3);
+    const job = items[0]!.job;
+    expect(job.source).toBe('netempregos');
+    expect(job.externalId).toMatch(/^\d+$/);
+    expect(job.url.startsWith('https://www.net-empregos.com/')).toBe(true);
+    expect(job.company.length).toBeGreaterThan(0);
+    expect(job.description).toMatch(/^Informática/);
+    expect(job.description).not.toContain('<b>');
+    expect(job.postedAt).toMatch(/Z$/);
+  });
+});

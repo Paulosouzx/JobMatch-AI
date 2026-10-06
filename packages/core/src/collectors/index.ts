@@ -5,6 +5,8 @@ import {
   normalizeGreenhouse,
   normalizeItJobs,
   normalizeLever,
+  normalizeNetEmpregos,
+  parseNetEmpregosFeed,
   normalizeRemoteOk,
   normalizeRemotive,
   type CollectedJob,
@@ -172,6 +174,34 @@ export const itJobsCollector: Collector<ItJobsConfig> = {
       return { jobs: compact(asArray(data.results).map(normalizeItJobs)), errors: [] };
     } catch (error) {
       return { jobs: [], errors: [`itjobs: ${errorMessage(error).replace(config.apiKey, '***')}`] };
+    }
+  },
+};
+
+export interface NetEmpregosConfig {
+  categories?: string[];
+}
+
+export const netEmpregosCollector: Collector<NetEmpregosConfig> = {
+  id: 'netempregos',
+  async collect(config, fetchFn) {
+    try {
+      const response = await fetchFn('https://www.net-empregos.com/rss.asp', {
+        headers: { Accept: 'application/rss+xml, application/xml', 'User-Agent': 'jobmatch-ai' },
+      });
+      if (!response.ok) throw new Error(`GET net-empregos rss failed with ${response.status}`);
+      const xml = new TextDecoder('iso-8859-1').decode(await response.arrayBuffer());
+      const wanted = (config.categories ?? [])
+        .map((value) => value.trim().toLowerCase())
+        .filter(Boolean);
+      const jobs = compact(parseNetEmpregosFeed(xml).map(normalizeNetEmpregos)).filter((item) => {
+        if (wanted.length === 0) return true;
+        const category = String((item.raw as { category?: string }).category ?? '').toLowerCase();
+        return wanted.some((value) => category.includes(value));
+      });
+      return { jobs, errors: [] };
+    } catch (error) {
+      return { jobs: [], errors: [`netempregos: ${errorMessage(error)}`] };
     }
   },
 };

@@ -6,7 +6,7 @@ const noSecrets = { adzunaKey: null, itjobsKey: null };
 describe('buildCollectTasks', () => {
   it('uses free default sources when the user has none configured', () => {
     const tasks = buildCollectTasks([], { adzuna_app_id: null }, noSecrets);
-    expect(tasks.map((t) => t.id)).toEqual(['remotive', 'arbeitnow', 'remoteok']);
+    expect(tasks.map((t) => t.id)).toEqual(['remotive', 'arbeitnow', 'netempregos', 'remoteok']);
   });
 
   it('respects disabled sources and company boards', () => {
@@ -19,7 +19,7 @@ describe('buildCollectTasks', () => {
       { adzuna_app_id: null },
       noSecrets,
     );
-    expect(tasks.map((t) => t.id)).toEqual(['arbeitnow', 'remoteok', 'greenhouse']);
+    expect(tasks.map((t) => t.id)).toEqual(['arbeitnow', 'netempregos', 'remoteok', 'greenhouse']);
   });
 
   it('only enables keyed sources when keys exist', () => {

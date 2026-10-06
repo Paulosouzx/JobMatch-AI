@@ -19,7 +19,13 @@ createRoot(document.getElementById('root')!).render(
           <AuthProvider>
             <App />
           </AuthProvider>
-          <Toaster richColors={false} position="bottom-right" />
+          <Toaster
+            richColors
+            closeButton
+            position="bottom-right"
+            offset={{ bottom: 88, right: 24 }}
+            mobileOffset={{ bottom: 88 }}
+          />
         </TooltipProvider>
       </ThemeProvider>
     </BrowserRouter>

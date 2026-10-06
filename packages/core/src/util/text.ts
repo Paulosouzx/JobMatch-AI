@@ -65,12 +65,13 @@ export function asArray(value: unknown): unknown[] {
 
 export function toIsoDate(
   value: unknown,
-  unit: 'iso' | 'seconds' | 'millis' = 'iso',
+  unit: 'iso' | 'seconds' | 'millis' | 'rfc' = 'iso',
 ): string | null {
   if (value === null || value === undefined || value === '') return null;
   let date: Date;
   if (unit === 'seconds') date = new Date(Number(value) * 1000);
   else if (unit === 'millis') date = new Date(Number(value));
+  else if (unit === 'rfc') date = new Date(String(value));
   else {
     const raw = String(value);
     const hasZone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(raw);

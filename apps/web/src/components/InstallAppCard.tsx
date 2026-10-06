@@ -1,7 +1,10 @@
+import { CircleCheck, Download, Smartphone } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { promptInstall, useInstallState } from '../lib/install';
-import { Alert, Button, Card } from './legacy-ui';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { promptInstall, useInstallState } from '@/lib/install';
 
 export function InstallAppCard() {
   const { t } = useTranslation();
@@ -11,24 +14,38 @@ export function InstallAppCard() {
   async function install() {
     setBusy(true);
     try {
-      await promptInstall();
+      if (await promptInstall()) toast.success(t('install.installedToast'));
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <Card className="space-y-3">
-      <h2 className="font-semibold">{t('install.title')}</h2>
-      <p className="text-sm text-slate-600 dark:text-slate-300">{t('install.description')}</p>
-      {state === 'installed' && <Alert kind="success">{t('install.installed')}</Alert>}
+    <Card className="flex-row items-center gap-4 p-5">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
+        <Smartphone className="size-5" strokeWidth={1.75} aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{t('install.title')}</p>
+        <p className="text-xs text-muted-foreground">
+          {state === 'installed'
+            ? t('install.installed')
+            : state === 'ios'
+              ? t('install.ios')
+              : state === 'unavailable'
+                ? t('install.manual')
+                : t('install.description')}
+        </p>
+      </div>
       {state === 'available' && (
-        <Button type="button" disabled={busy} onClick={() => void install()}>
+        <Button type="button" variant="success" disabled={busy} onClick={() => void install()}>
+          <Download />
           {t('install.button')}
         </Button>
       )}
-      {state === 'ios' && <Alert kind="info">{t('install.ios')}</Alert>}
-      {state === 'unavailable' && <Alert kind="info">{t('install.manual')}</Alert>}
+      {state === 'installed' && (
+        <CircleCheck className="size-5 shrink-0 text-success" aria-hidden="true" />
+      )}
     </Card>
   );
 }

@@ -1,5 +1,5 @@
 import { jobSchema, type Job } from '../types';
-import { asArray, asRecord, asString, htmlToText, toIsoDate } from '../util/text';
+import { asArray, asRecord, asString, decodeEntities, htmlToText, toIsoDate } from '../util/text';
 
 export interface CollectedJob {
   job: Job;
@@ -155,5 +155,50 @@ export function normalizeItJobs(raw: unknown): CollectedJob | null {
       postedAt: toIsoDate(r.publishedAt),
     },
     raw,
+  );
+}
+
+function pick(block: string, tag: string): string {
+  const match = block.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'));
+  if (!match?.[1]) return '';
+  return match[1].replace(/^\s*<!\[CDATA\[([\s\S]*?)\]\]>\s*$/, '$1').trim();
+}
+
+function labelled(text: string, label: string): string {
+  const match = text.match(new RegExp(`${label}:\\s*([^\\n]+)`, 'i'));
+  return match?.[1]?.trim() ?? '';
+}
+
+export function parseNetEmpregosFeed(xml: string): string[] {
+  return xml.match(/<item>[\s\S]*?<\/item>/gi) ?? [];
+}
+
+export function normalizeNetEmpregos(item: string): CollectedJob | null {
+  const title = decodeEntities(pick(item, 'title'));
+  const company = decodeEntities(pick(item, 'dc:creator'));
+  const url = pick(item, 'link') || pick(item, 'guid');
+  const details = htmlToText(decodeEntities(pick(item, 'description')));
+  const category = labelled(details, 'Categoria');
+  const zone = labelled(details, 'Zona');
+  const description =
+    details
+      .split(/Descrição:\s*/i)[1]
+      ?.split(/Ver Oferta de Emprego/i)[0]
+      ?.trim() ?? details;
+  const id = url.match(/net-empregos\.com\/(\d+)/)?.[1] ?? url;
+  const text = `${title} ${description}`;
+  return build(
+    {
+      source: 'netempregos',
+      externalId: id,
+      title,
+      company: company || 'Net-Empregos',
+      location: nullable(zone),
+      remote: /remoto|teletrabalho|remote|home ?office/i.test(text),
+      description: category ? `${category}\n\n${description}` : description,
+      url,
+      postedAt: toIsoDate(pick(item, 'pubDate'), 'rfc'),
+    },
+    { title, company, url, category, zone },
   );
 }

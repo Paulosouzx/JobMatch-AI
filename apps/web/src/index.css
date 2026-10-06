@@ -44,6 +44,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
   --color-border: var(--border);
   --color-input: var(--input);
@@ -145,7 +146,8 @@
   --accent: color-mix(in oklab, var(--brand-600) 8%, oklch(0.975 0 0));
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.55 0.22 27);
-  --success: oklch(0.55 0.14 155);
+  --success: oklch(0.52 0.13 155);
+  --success-foreground: oklch(0.99 0 0);
   --warning: oklch(0.62 0.15 70);
   --border: color-mix(in oklab, var(--brand-600) 8%, oklch(0.915 0 0));
   --input: color-mix(in oklab, var(--brand-600) 10%, oklch(0.9 0 0));
@@ -182,6 +184,7 @@
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.68 0.19 25);
   --success: oklch(0.72 0.15 155);
+  --success-foreground: oklch(0.2 0.04 155);
   --warning: oklch(0.8 0.14 80);
   --border: color-mix(in oklab, var(--brand-400) 10%, oklch(0.29 0 0));
   --input: color-mix(in oklab, var(--brand-400) 12%, oklch(0.32 0 0));
@@ -212,6 +215,29 @@ html.dark {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='tab'],
+  [role='option'],
+  [role='menuitem'],
+  [role='menuitemradio'],
+  [role='checkbox'],
+  [role='switch'],
+  [role='combobox'],
+  select,
+  summary,
+  label[for],
+  input[type='checkbox'],
+  input[type='radio'],
+  input[type='file'] {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [aria-disabled='true'] {
+    cursor: not-allowed;
   }
 
   body {

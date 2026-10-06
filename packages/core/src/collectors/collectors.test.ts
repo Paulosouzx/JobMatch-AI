@@ -82,3 +82,18 @@ describe('collectors with mocked fetch', () => {
     expect(result.errors[0]).toContain('network down');
   });
 });
+
+describe('netEmpregosCollector', () => {
+  it('decodes ISO-8859-1 and filters by category', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { netEmpregosCollector } = await import('./index');
+    const xml = readFileSync(new URL('../__fixtures__/netempregos.xml', import.meta.url), 'utf8');
+    const bytes = new Uint8Array([...xml].map((char) => char.charCodeAt(0) & 0xff));
+    const fetchFn = async () => new Response(bytes, { status: 200 });
+    const all = await netEmpregosCollector.collect({}, fetchFn);
+    expect(all.jobs).toHaveLength(3);
+    expect(all.jobs[0]!.job.description).toContain('Informática');
+    const none = await netEmpregosCollector.collect({ categories: ['Restauração'] }, fetchFn);
+    expect(none.jobs).toHaveLength(0);
+  });
+});

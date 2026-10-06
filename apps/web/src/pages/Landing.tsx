@@ -57,7 +57,16 @@ interface Mock {
 
 const FEATURE_ICONS: LucideIcon[] = [Wallet, CodeXml, KeyRound, UserCheck, ShieldCheck, BellRing];
 const STEP_ICONS: LucideIcon[] = [Search, Funnel, Sparkles, BellRing];
-const SOURCES = ['Remotive', 'Arbeitnow', 'RemoteOK', 'Greenhouse', 'Lever', 'Adzuna', 'ITJobs.pt'];
+const SOURCES = [
+  'Remotive',
+  'Arbeitnow',
+  'RemoteOK',
+  'Net-Empregos',
+  'Greenhouse',
+  'Lever',
+  'Adzuna',
+  'ITJobs.pt',
+];
 
 const pillPrimary =
   'inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-brand-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600';
