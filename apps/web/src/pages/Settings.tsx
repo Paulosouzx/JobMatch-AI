@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
+import { InstallAppCard } from '../components/InstallAppCard';
 import { PushSettings } from '../components/PushSettings';
 import { Alert, Button, Card, Field, Input, Select, Spinner, Textarea } from '../components/ui';
 import { useAuth } from '../lib/auth';
@@ -344,6 +345,8 @@ export default function Settings() {
           {testing === 'llm' ? t('settings.testing') : t('settings.testConnection')}
         </Button>
       </Card>
+
+      <InstallAppCard />
 
       <PushSettings />
 

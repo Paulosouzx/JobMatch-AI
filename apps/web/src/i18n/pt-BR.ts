@@ -140,6 +140,16 @@ export const ptBR = {
     privacyNote:
       'Atenção: no plano gratuito do Gemini, os dados enviados podem ser usados para treino. O CV é limpo de email, telefone e morada antes do envio, mas isso é uma heurística.',
   },
+  install: {
+    title: 'Instalar como app',
+    description:
+      'Instala o JobMatch AI no computador ou telemóvel: abre numa janela própria, fica no ecrã principal e recebe notificações como uma app.',
+    button: 'Instalar app',
+    installed: 'A app já está instalada neste dispositivo.',
+    ios: 'No iPhone/iPad: abre este site no Safari, toca em Partilhar e depois em "Adicionar ao ecrã principal".',
+    manual:
+      'Este navegador não permite instalar com um clique. No Chrome ou Edge, usa o ícone de instalar na barra de endereço; no Safari (Mac), usa Ficheiro → Adicionar à Dock.',
+  },
   push: {
     title: 'Notificações push',
     description:

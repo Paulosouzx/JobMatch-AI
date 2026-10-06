@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { AuthProvider } from './lib/auth';
+import { listenForInstallPrompt } from './lib/install';
 import { registerServiceWorker } from './lib/push';
 import './i18n';
 import './index.css';
@@ -17,4 +18,5 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 );
 
+listenForInstallPrompt();
 registerServiceWorker();
