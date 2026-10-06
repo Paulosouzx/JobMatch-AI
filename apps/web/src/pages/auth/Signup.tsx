@@ -1,9 +1,16 @@
 import { ArrowLeft, GitFork, LockKeyhole, Mail } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/AuthLayout';
-import { IconField, PasswordField, PrimaryButton } from '../../components/auth/AuthUI';
+import {
+  Divider,
+  IconField,
+  OAuthButtons,
+  PasswordField,
+  PrimaryButton,
+} from '../../components/auth/AuthUI';
+import { VerifyCode } from '../../components/auth/VerifyCode';
 import { Alert } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { translateAuthError } from '../../lib/auth-errors';
@@ -13,12 +20,13 @@ import { APP_TAG, supabase } from '../../lib/supabase';
 export default function Signup() {
   const { t } = useTranslation();
   const { session } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
 
   if (session) return <Navigate to="/app" replace />;
 
@@ -50,18 +58,31 @@ export default function Signup() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
-    setInfo(null);
     if (password.length < 8) return setError(t('auth.passwordShort'));
     if (password !== confirm) return setError(t('auth.passwordMismatch'));
     setBusy(true);
-    const { error: failure } = await supabase.auth.signUp({
+    const { data, error: failure } = await supabase.auth.signUp({
       email,
       password,
       options: { data: APP_TAG, emailRedirectTo: `${window.location.origin}/app` },
     });
     setBusy(false);
     if (failure) setError(translateAuthError(failure.message));
-    else setInfo(t('auth.signupSent'));
+    else if (data.session) navigate('/app', { replace: true });
+    else setPendingEmail(email);
+  }
+
+  if (pendingEmail) {
+    return (
+      <AuthLayout title={t('auth.signupTitle')} subtitle={t('auth.signupSubtitle')} tab="signup">
+        <VerifyCode
+          email={pendingEmail}
+          type="signup"
+          onVerified={() => navigate('/app', { replace: true })}
+          onBack={() => setPendingEmail(null)}
+        />
+      </AuthLayout>
+    );
   }
 
   return (
@@ -97,20 +118,12 @@ export default function Signup() {
           onChange={(e) => setConfirm(e.target.value)}
         />
         {error && <Alert>{error}</Alert>}
-        {info && <Alert kind="success">{info}</Alert>}
         <PrimaryButton type="submit" disabled={busy}>
           {t('auth.submitSignup')}
         </PrimaryButton>
       </form>
-      <p className="hidden text-center text-sm text-slate-500 lg:block dark:text-slate-400">
-        {t('auth.haveAccount')}{' '}
-        <Link
-          to="/login"
-          className="font-medium text-brand-600 hover:underline dark:text-brand-400"
-        >
-          {t('auth.tabLogin')}
-        </Link>
-      </p>
+      <Divider label={t('auth.orContinue')} />
+      <OAuthButtons redirectPath="/app" onError={setError} />
     </AuthLayout>
   );
 }

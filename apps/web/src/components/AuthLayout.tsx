@@ -107,7 +107,7 @@ export function AuthLayout({
             )}
           </div>
           {tab && (
-            <div className="mb-6 lg:hidden">
+            <div className="mb-6 lg:mt-8 lg:mb-0">
               <AuthTabs active={tab} />
             </div>
           )}

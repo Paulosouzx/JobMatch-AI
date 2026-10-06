@@ -5,6 +5,7 @@ interface ImportMetaEnv {
   readonly VITE_SUPABASE_ANON_KEY?: string;
   readonly VITE_ALLOW_SIGNUPS?: string;
   readonly VITE_ENABLE_GITHUB_OAUTH?: string;
+  readonly VITE_ENABLE_GOOGLE_OAUTH?: string;
   readonly VITE_REPO_URL?: string;
 }
 

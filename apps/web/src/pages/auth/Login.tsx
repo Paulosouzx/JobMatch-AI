@@ -1,4 +1,4 @@
-import { GitFork, LockKeyhole, Mail, WandSparkles } from 'lucide-react';
+import { LockKeyhole, Mail, WandSparkles } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
@@ -6,10 +6,12 @@ import { AuthLayout } from '../../components/AuthLayout';
 import {
   Divider,
   IconField,
+  OAuthButtons,
   PasswordField,
   PrimaryButton,
   SecondaryButton,
 } from '../../components/auth/AuthUI';
+import { VerifyCode, type CodeType } from '../../components/auth/VerifyCode';
 import { Alert } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { translateAuthError } from '../../lib/auth-errors';
@@ -33,7 +35,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ email: string; type: CodeType } | null>(null);
 
   if (session) return <Navigate to={target} replace />;
 
@@ -41,8 +43,14 @@ export default function Login() {
     event.preventDefault();
     setBusy(true);
     setError(null);
-    setInfo(null);
     const { error: failure } = await supabase.auth.signInWithPassword({ email, password });
+    if (failure && /email not confirmed/i.test(failure.message)) {
+      const { error: resendError } = await supabase.auth.resend({ type: 'signup', email });
+      setBusy(false);
+      if (resendError) setError(translateAuthError(resendError.message));
+      else setPending({ email, type: 'signup' });
+      return;
+    }
     setBusy(false);
     if (failure) setError(translateAuthError(failure.message));
     else navigate(target, { replace: true });
@@ -65,15 +73,20 @@ export default function Login() {
     });
     setBusy(false);
     if (failure) setError(translateAuthError(failure.message));
-    else setInfo(t('auth.magicLinkSent'));
+    else setPending({ email, type: 'email' });
   }
 
-  async function signInWithGithub() {
-    const { error: failure } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: { redirectTo: `${window.location.origin}${target}` },
-    });
-    if (failure) setError(translateAuthError(failure.message));
+  if (pending) {
+    return (
+      <AuthLayout title={t('auth.loginTitle')} subtitle={t('auth.loginSubtitle')} tab="login">
+        <VerifyCode
+          email={pending.email}
+          type={pending.type}
+          onVerified={() => navigate(target, { replace: true })}
+          onBack={() => setPending(null)}
+        />
+      </AuthLayout>
+    );
   }
 
   return (
@@ -107,7 +120,6 @@ export default function Login() {
           </Link>
         </div>
         {error && <Alert>{error}</Alert>}
-        {info && <Alert kind="success">{info}</Alert>}
         <PrimaryButton type="submit" disabled={busy}>
           {t('auth.submitLogin')}
         </PrimaryButton>
@@ -115,28 +127,11 @@ export default function Login() {
 
       <Divider label={t('auth.orContinue')} />
 
-      <div className={`grid gap-3 ${config.githubOAuth ? 'grid-cols-2' : 'grid-cols-1'}`}>
-        <SecondaryButton type="button" disabled={busy} onClick={() => void sendMagicLink()}>
-          <WandSparkles className="h-4 w-4 text-brand-600" strokeWidth={1.75} />
-          {t('auth.magicLink')}
-        </SecondaryButton>
-        {config.githubOAuth && (
-          <SecondaryButton type="button" onClick={() => void signInWithGithub()}>
-            <GitFork className="h-4 w-4" strokeWidth={1.75} />
-            GitHub
-          </SecondaryButton>
-        )}
-      </div>
-
-      <p className="hidden text-center text-sm text-slate-500 lg:block dark:text-slate-400">
-        {t('auth.noAccount')}{' '}
-        <Link
-          to="/signup"
-          className="font-medium text-brand-600 hover:underline dark:text-brand-400"
-        >
-          {t('auth.tabSignup')}
-        </Link>
-      </p>
+      <OAuthButtons redirectPath={target} onError={setError} />
+      <SecondaryButton type="button" disabled={busy} onClick={() => void sendMagicLink()}>
+        <WandSparkles className="h-4 w-4 text-brand-600" strokeWidth={1.75} />
+        {t('auth.magicLink')}
+      </SecondaryButton>
     </AuthLayout>
   );
 }
