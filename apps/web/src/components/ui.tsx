@@ -1,3 +1,4 @@
+import { Moon, Sun } from 'lucide-react';
 import type {
   ButtonHTMLAttributes,
   InputHTMLAttributes,
@@ -11,7 +12,7 @@ const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).j
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600',
+  primary: 'bg-brand-600 text-white hover:bg-brand-500 focus-visible:outline-brand-600',
   secondary:
     'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
   danger: 'bg-red-600 text-white hover:bg-red-500',
@@ -36,7 +37,7 @@ export function Button({
 }
 
 const fieldClass =
-  'block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
+  'block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100';
 
 export function Input(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={cx(fieldClass, props.className)} />;
@@ -93,7 +94,7 @@ export function Alert({
       'border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200',
     success:
       'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-200',
-    info: 'border-indigo-200 bg-indigo-50 text-indigo-800 dark:border-indigo-900 dark:bg-indigo-950 dark:text-indigo-200',
+    info: 'border-brand-200 bg-brand-50 text-brand-800 dark:border-brand-900 dark:bg-brand-950 dark:text-brand-200',
   };
   return (
     <div
@@ -108,7 +109,7 @@ export function Alert({
 export function Spinner({ label }: { label: string }) {
   return (
     <div className="flex items-center gap-2 py-8 text-sm text-slate-500" role="status">
-      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-brand-600" />
       {label}
     </div>
   );
@@ -149,7 +150,11 @@ export function ThemeToggle({
       aria-label={label}
       className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
     >
-      {dark ? '☀️' : '🌙'}
+      {dark ? (
+        <Sun className="h-5 w-5" strokeWidth={1.75} />
+      ) : (
+        <Moon className="h-5 w-5" strokeWidth={1.75} />
+      )}
     </button>
   );
 }

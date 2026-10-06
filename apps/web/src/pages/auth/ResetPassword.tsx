@@ -1,8 +1,10 @@
+import { LockKeyhole } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/AuthLayout';
-import { Alert, Button, Field, Input } from '../../components/ui';
+import { PasswordField, PrimaryButton } from '../../components/auth/AuthUI';
+import { Alert } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { translateAuthError } from '../../lib/auth-errors';
 import { supabase } from '../../lib/supabase';
@@ -38,33 +40,33 @@ export default function ResetPassword() {
   const missingSession = !loading && !session;
 
   return (
-    <AuthLayout title={t('auth.resetTitle')}>
+    <AuthLayout title={t('auth.resetTitle')} subtitle={t('auth.resetSubtitle')}>
       {missingSession && <Alert>{translateAuthError('invalid token')}</Alert>}
       <form onSubmit={onSubmit} className="space-y-4">
-        <Field label={t('common.password')}>
-          <Input
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Field>
-        <Field label={t('auth.confirmPassword')}>
-          <Input
-            type="password"
-            autoComplete="new-password"
-            required
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-          />
-        </Field>
+        <PasswordField
+          icon={LockKeyhole}
+          label={t('common.password')}
+          autoComplete="new-password"
+          placeholder="••••••••"
+          minLength={8}
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <PasswordField
+          icon={LockKeyhole}
+          label={t('auth.confirmPassword')}
+          autoComplete="new-password"
+          placeholder="••••••••"
+          required
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
         {error && <Alert>{error}</Alert>}
         {done && <Alert kind="success">{t('auth.resetDone')}</Alert>}
-        <Button type="submit" disabled={busy || missingSession} className="w-full">
+        <PrimaryButton type="submit" disabled={busy || missingSession}>
           {t('auth.submitReset')}
-        </Button>
+        </PrimaryButton>
       </form>
     </AuthLayout>
   );

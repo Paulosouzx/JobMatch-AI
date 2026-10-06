@@ -1,8 +1,10 @@
+import { ArrowLeft, Mail } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { AuthLayout } from '../../components/AuthLayout';
-import { Alert, Button, Field, Input } from '../../components/ui';
+import { IconField, PrimaryButton } from '../../components/auth/AuthUI';
+import { Alert } from '../../components/ui';
 import { translateAuthError } from '../../lib/auth-errors';
 import { supabase } from '../../lib/supabase';
 
@@ -26,24 +28,29 @@ export default function ForgotPassword() {
   }
 
   return (
-    <AuthLayout title={t('auth.forgotTitle')}>
+    <AuthLayout title={t('auth.forgotTitle')} subtitle={t('auth.forgotSubtitle')}>
       <form onSubmit={onSubmit} className="space-y-4">
-        <Field label={t('common.email')}>
-          <Input
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Field>
+        <IconField
+          icon={Mail}
+          label={t('common.email')}
+          type="email"
+          autoComplete="email"
+          placeholder={t('auth.emailPlaceholder')}
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
         {error && <Alert>{error}</Alert>}
         {info && <Alert kind="success">{info}</Alert>}
-        <Button type="submit" disabled={busy} className="w-full">
+        <PrimaryButton type="submit" disabled={busy}>
           {t('auth.submitForgot')}
-        </Button>
+        </PrimaryButton>
       </form>
-      <Link to="/login" className="text-sm text-indigo-600 hover:underline">
+      <Link
+        to="/login"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+      >
+        <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
         {t('common.back')}
       </Link>
     </AuthLayout>

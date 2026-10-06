@@ -1,8 +1,16 @@
+import { GitFork, LockKeyhole, Mail, WandSparkles } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/AuthLayout';
-import { Alert, Button, Field, Input } from '../../components/ui';
+import {
+  Divider,
+  IconField,
+  PasswordField,
+  PrimaryButton,
+  SecondaryButton,
+} from '../../components/auth/AuthUI';
+import { Alert } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { translateAuthError } from '../../lib/auth-errors';
 import { config } from '../../lib/config';
@@ -69,54 +77,66 @@ export default function Login() {
   }
 
   return (
-    <AuthLayout title={t('auth.loginTitle')}>
+    <AuthLayout title={t('auth.loginTitle')} subtitle={t('auth.loginSubtitle')} tab="login">
       <form onSubmit={onSubmit} className="space-y-4">
-        <Field label={t('common.email')}>
-          <Input
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Field>
-        <Field label={t('common.password')}>
-          <Input
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Field>
+        <IconField
+          icon={Mail}
+          label={t('common.email')}
+          type="email"
+          autoComplete="email"
+          placeholder={t('auth.emailPlaceholder')}
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <PasswordField
+          icon={LockKeyhole}
+          label={t('common.password')}
+          autoComplete="current-password"
+          placeholder="••••••••"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <div className="flex justify-end">
+          <Link
+            to="/forgot-password"
+            className="text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+          >
+            {t('auth.forgotLink')}
+          </Link>
+        </div>
         {error && <Alert>{error}</Alert>}
         {info && <Alert kind="success">{info}</Alert>}
-        <Button type="submit" disabled={busy} className="w-full">
+        <PrimaryButton type="submit" disabled={busy}>
           {t('auth.submitLogin')}
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={busy}
-          onClick={sendMagicLink}
-          className="w-full"
-        >
-          {t('auth.magicLink')}
-        </Button>
-        {config.githubOAuth && (
-          <Button type="button" variant="secondary" onClick={signInWithGithub} className="w-full">
-            {t('auth.withGithub')}
-          </Button>
-        )}
+        </PrimaryButton>
       </form>
-      <div className="flex justify-between text-sm">
-        <Link to="/forgot-password" className="text-indigo-600 hover:underline">
-          {t('auth.forgotLink')}
-        </Link>
-        <Link to="/signup" className="text-indigo-600 hover:underline">
-          {t('auth.signupTitle')}
-        </Link>
+
+      <Divider label={t('auth.orContinue')} />
+
+      <div className={`grid gap-3 ${config.githubOAuth ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        <SecondaryButton type="button" disabled={busy} onClick={() => void sendMagicLink()}>
+          <WandSparkles className="h-4 w-4 text-brand-600" strokeWidth={1.75} />
+          {t('auth.magicLink')}
+        </SecondaryButton>
+        {config.githubOAuth && (
+          <SecondaryButton type="button" onClick={() => void signInWithGithub()}>
+            <GitFork className="h-4 w-4" strokeWidth={1.75} />
+            GitHub
+          </SecondaryButton>
+        )}
       </div>
+
+      <p className="hidden text-center text-sm text-slate-500 lg:block dark:text-slate-400">
+        {t('auth.noAccount')}{' '}
+        <Link
+          to="/signup"
+          className="font-medium text-brand-600 hover:underline dark:text-brand-400"
+        >
+          {t('auth.tabSignup')}
+        </Link>
+      </p>
     </AuthLayout>
   );
 }

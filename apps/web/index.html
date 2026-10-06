@@ -8,8 +8,14 @@
       name="description"
       content="Projeto open source que recolhe vagas, avalia cada uma contra o teu perfil com um LLM e envia uma notificação das melhores. Custo zero, chaves tuas, tu decides onde candidatar."
     />
-    <meta name="theme-color" content="#4f46e5" />
+    <meta name="theme-color" content="#014c49" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..700&family=Inter:wght@400;500;600&display=swap"
+    />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -26,6 +32,10 @@
         var stored = localStorage.getItem('theme');
         var dark = stored ? stored === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
         if (dark) document.documentElement.classList.add('dark');
+        var palette = new URLSearchParams(location.search).get('palette');
+        if (palette) localStorage.setItem('palette', palette);
+        palette = palette || localStorage.getItem('palette');
+        if (palette) document.documentElement.setAttribute('data-palette', palette);
       } catch (e) {}
     </script>
   </head>

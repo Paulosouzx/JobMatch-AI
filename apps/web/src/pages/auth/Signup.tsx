@@ -1,8 +1,10 @@
+import { ArrowLeft, GitFork, LockKeyhole, Mail } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate } from 'react-router-dom';
 import { AuthLayout } from '../../components/AuthLayout';
-import { Alert, Button, Field, Input } from '../../components/ui';
+import { IconField, PasswordField, PrimaryButton } from '../../components/auth/AuthUI';
+import { Alert } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { translateAuthError } from '../../lib/auth-errors';
 import { config } from '../../lib/config';
@@ -22,19 +24,25 @@ export default function Signup() {
 
   if (!config.allowSignups) {
     return (
-      <AuthLayout title={t('auth.signupsClosedTitle')}>
-        <p className="text-sm text-slate-600 dark:text-slate-300">{t('auth.signupsClosedText')}</p>
+      <AuthLayout
+        title={t('auth.signupsClosedTitle')}
+        subtitle={t('auth.signupsClosedText')}
+        tab="signup"
+      >
         <a
           href={`${config.repoUrl}#self-hosting`}
-          className="inline-block text-sm font-medium text-indigo-600 hover:underline"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white text-sm font-medium text-slate-800 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
         >
+          <GitFork className="h-4 w-4" strokeWidth={1.75} />
           {t('auth.selfHost')}
         </a>
-        <div className="text-sm">
-          <Link to="/login" className="text-indigo-600 hover:underline">
-            {t('auth.loginTitle')}
-          </Link>
-        </div>
+        <Link
+          to="/login"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-brand-600 hover:underline dark:text-brand-400"
+        >
+          <ArrowLeft className="h-4 w-4" strokeWidth={1.75} />
+          {t('auth.tabLogin')}
+        </Link>
       </AuthLayout>
     );
   }
@@ -57,46 +65,50 @@ export default function Signup() {
   }
 
   return (
-    <AuthLayout title={t('auth.signupTitle')}>
+    <AuthLayout title={t('auth.signupTitle')} subtitle={t('auth.signupSubtitle')} tab="signup">
       <form onSubmit={onSubmit} className="space-y-4">
-        <Field label={t('common.email')}>
-          <Input
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Field>
-        <Field label={t('common.password')}>
-          <Input
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </Field>
-        <Field label={t('auth.confirmPassword')}>
-          <Input
-            type="password"
-            autoComplete="new-password"
-            required
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-          />
-        </Field>
+        <IconField
+          icon={Mail}
+          label={t('common.email')}
+          type="email"
+          autoComplete="email"
+          placeholder={t('auth.emailPlaceholder')}
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <PasswordField
+          icon={LockKeyhole}
+          label={t('common.password')}
+          autoComplete="new-password"
+          placeholder="••••••••"
+          minLength={8}
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <PasswordField
+          icon={LockKeyhole}
+          label={t('auth.confirmPassword')}
+          autoComplete="new-password"
+          placeholder="••••••••"
+          required
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
         {error && <Alert>{error}</Alert>}
         {info && <Alert kind="success">{info}</Alert>}
-        <Button type="submit" disabled={busy} className="w-full">
+        <PrimaryButton type="submit" disabled={busy}>
           {t('auth.submitSignup')}
-        </Button>
+        </PrimaryButton>
       </form>
-      <p className="text-sm">
+      <p className="hidden text-center text-sm text-slate-500 lg:block dark:text-slate-400">
         {t('auth.haveAccount')}{' '}
-        <Link to="/login" className="text-indigo-600 hover:underline">
-          {t('auth.loginTitle')}
+        <Link
+          to="/login"
+          className="font-medium text-brand-600 hover:underline dark:text-brand-400"
+        >
+          {t('auth.tabLogin')}
         </Link>
       </p>
     </AuthLayout>

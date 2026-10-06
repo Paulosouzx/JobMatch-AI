@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 import { AppLayout } from './components/AppLayout';
 import { ConfigMissing } from './components/ConfigMissing';
 import { Spinner } from './components/ui';
@@ -17,6 +17,7 @@ const JobDetail = lazy(() => import('./pages/JobDetail'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Runs = lazy(() => import('./pages/Runs'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 export default function App() {
   const { t } = useTranslation();
@@ -37,9 +38,10 @@ export default function App() {
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="runs" element={<Runs />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
   );

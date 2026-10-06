@@ -3,7 +3,89 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Bricolage Grotesque', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
+  --color-deep: var(--deep);
+  --color-accent: var(--accent);
+}
+
+:root,
+[data-palette='ocean'] {
+  --brand-50: #eefaff;
+  --brand-100: #d9f5fe;
+  --brand-200: #c2f1fe;
+  --brand-300: #a8ecfe;
+  --brand-400: #5ea9e2;
+  --brand-500: #1f7cc8;
+  --brand-600: #0e68b4;
+  --brand-700: #0b5593;
+  --brand-800: #0a4677;
+  --brand-900: #083a62;
+  --brand-950: #052540;
+  --deep: #014c49;
+  --accent: #5259f3;
+}
+
+[data-palette='forest'] {
+  --brand-50: #f0f7f1;
+  --brand-100: #dcede0;
+  --brand-200: #bcdbc4;
+  --brand-300: #93c2a1;
+  --brand-400: #5e9d72;
+  --brand-500: #3d8053;
+  --brand-600: #2d6a41;
+  --brand-700: #255536;
+  --brand-800: #1f442c;
+  --brand-900: #1a3825;
+  --brand-950: #0d1f14;
+  --deep: #1b2b22;
+  --accent: #e8a33d;
+}
+
+[data-palette='terracotta'] {
+  --brand-50: #fdf5f1;
+  --brand-100: #fae6dc;
+  --brand-200: #f4cab6;
+  --brand-300: #eba687;
+  --brand-400: #e07a52;
+  --brand-500: #d05d33;
+  --brand-600: #b84a24;
+  --brand-700: #993b1f;
+  --brand-800: #7c3220;
+  --brand-900: #652b1d;
+  --brand-950: #36140c;
+  --deep: #2a211c;
+  --accent: #2f8f83;
+}
+
+[data-palette='graphite'] {
+  --brand-50: #fff8eb;
+  --brand-100: #feecc7;
+  --brand-200: #fdd88a;
+  --brand-300: #fcc04d;
+  --brand-400: #f6a623;
+  --brand-500: #e88a0b;
+  --brand-600: #c96a06;
+  --brand-700: #a04c09;
+  --brand-800: #833c0f;
+  --brand-900: #6c3210;
+  --brand-950: #3e1803;
+  --deep: #1c1f24;
+  --accent: #3b82c4;
 }
 
 html {

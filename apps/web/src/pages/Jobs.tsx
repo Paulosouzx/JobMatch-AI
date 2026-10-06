@@ -111,7 +111,7 @@ export default function Jobs() {
           <li key={match.id}>
             <Link
               to={`/app/jobs/${match.id}`}
-              className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-indigo-400 dark:border-slate-800 dark:bg-slate-900"
+              className="block rounded-2xl border border-slate-200 bg-white p-4 transition hover:border-brand-400 dark:border-slate-800 dark:bg-slate-900"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">

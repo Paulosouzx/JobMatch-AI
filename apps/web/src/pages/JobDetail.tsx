@@ -153,7 +153,7 @@ export default function JobDetail() {
 
   return (
     <div className="space-y-5">
-      <Link to="/app" className="text-sm text-indigo-600 hover:underline">
+      <Link to="/app" className="text-sm text-brand-600 hover:underline">
         {t('common.back')}
       </Link>
 
@@ -174,7 +174,7 @@ export default function JobDetail() {
             href={job.url}
             target="_blank"
             rel="noreferrer noopener"
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500"
           >
             {t('jobs.openJob')}
           </a>
