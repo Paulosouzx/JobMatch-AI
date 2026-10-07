@@ -60,7 +60,7 @@ describe('createLLMProvider with a mock client', () => {
     );
     const result = await provider.scoreJob(makeJob(), makeProfile());
     expect(result.score.score).toBe(88);
-    expect(result.promptVersion).toBe('score.v1');
+    expect(result.promptVersion).toBe('score.v2');
     const sent = requests[0]!.user;
     expect(sent).not.toContain('jane@example.com');
     expect(sent).not.toContain('912 345 678');

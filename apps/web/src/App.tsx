@@ -18,6 +18,10 @@ const Settings = lazy(() => import('./pages/Settings'));
 const Runs = lazy(() => import('./pages/Runs'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 const DesignSystem = lazy(() => import('./pages/DesignSystem'));
+const ResumeTemplate = lazy(() => import('./pages/ResumeTemplate'));
+const ResumeAdapt = lazy(() => import('./pages/ResumeAdapt'));
+const StyleGuidePage = lazy(() => import('./pages/StyleGuide'));
+const PrintResume = lazy(() => import('./pages/PrintResume'));
 
 export default function App() {
   if (!isConfigured) return <ConfigMissing />;
@@ -41,9 +45,14 @@ export default function App() {
           />
         )}
         <Route element={<RequireAuth />}>
+          <Route path="/print/resume" element={<PrintResume />} />
+          <Route path="/print/resume/:versionId" element={<PrintResume />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<Jobs />} />
             <Route path="jobs/:jobId" element={<JobDetail />} />
+            <Route path="jobs/:jobId/resume" element={<ResumeAdapt />} />
+            <Route path="resume" element={<ResumeTemplate />} />
+            <Route path="style" element={<StyleGuidePage />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
             <Route path="runs" element={<Runs />} />

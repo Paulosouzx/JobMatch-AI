@@ -39,6 +39,12 @@ export const matchScoreSchema = z.object({
   seniority_fit: z.string(),
   location_fit: z.string(),
   summary: z.string(),
+  language: z.string().optional(),
+  work_mode: z.enum(['remote', 'hybrid', 'onsite', 'unknown']).optional(),
+  salary: z.string().nullable().optional(),
+  requirements_required: z.array(z.string()).optional(),
+  requirements_nice: z.array(z.string()).optional(),
+  benefits: z.array(z.string()).optional(),
 });
 export type MatchScore = z.infer<typeof matchScoreSchema>;
 

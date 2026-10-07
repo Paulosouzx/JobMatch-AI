@@ -1,12 +1,16 @@
 import type { Job, Profile } from '../types';
 
-export const COVER_LETTER_PROMPT_VERSION = 'cover-letter.v1';
+export const COVER_LETTER_PROMPT_VERSION = 'cover-letter.v2';
 
 export const COVER_LETTER_SYSTEM_PROMPT = `You write concise, honest cover letters. Rules:
-- 3 short paragraphs, maximum 220 words.
+- At most 3 short paragraphs, maximum 220 words.
 - Mention only skills and experience that appear in the candidate CV. Never invent facts.
 - Address the specific role and company; connect 2 or 3 concrete strengths to the job requirements.
 - Plain text only, no markdown, no placeholders for contact details, no subject line.`;
+
+export function buildCoverLetterSystemPrompt(styleGuide?: string): string {
+  return styleGuide ? `${COVER_LETTER_SYSTEM_PROMPT}\n\n${styleGuide}` : COVER_LETTER_SYSTEM_PROMPT;
+}
 
 export function buildCoverLetterUserPrompt(
   job: Job,

@@ -15,6 +15,8 @@ const LABELS: Record<string, string> = {
   settings: 'nav.settings',
   runs: 'nav.runs',
   design: 'nav.design',
+  resume: 'nav.resume',
+  style: 'nav.style',
 };
 
 export function AppBreadcrumbs() {
@@ -28,7 +30,13 @@ export function AppBreadcrumbs() {
   const crumbs: { label: string; to?: string }[] = [];
   if (parts.length === 0 || parts[0] === 'jobs') {
     crumbs.push({ label: t('nav.jobs'), to: parts.length > 0 ? '/app' : undefined });
-    if (parts[0] === 'jobs' && parts[1]) crumbs.push({ label: t('nav.jobDetail') });
+    if (parts[0] === 'jobs' && parts[1]) {
+      crumbs.push({
+        label: t('nav.jobDetail'),
+        to: parts[2] ? `/app/jobs/${parts[1]}` : undefined,
+      });
+      if (parts[2] === 'resume') crumbs.push({ label: t('nav.adapt') });
+    }
   } else {
     const key = LABELS[parts[0] ?? ''];
     crumbs.push({ label: key ? t(key) : t('notFound.title') });

@@ -47,6 +47,13 @@ docs/SPEC.md    implementation plan and decisions
 
 `packages/core` only uses `fetch` and Zod, so the same code runs in Node (worker) and Deno (Edge Functions).
 
+## Resume tailoring and cover letters
+
+- **Resume template**: your CV is stored as a fixed structure (sections, order, roles, companies, dates) plus a JSON of editable text fields (`{{exp1_bullet1}}`, `{{skills_tools}}`…). Only the fields you mark as adaptable are sent to the LLM.
+- **Validation in code**: the LLM must return exactly the same keys. Missing keys, extra keys, text more than 15% longer than the original, new numbers or new technical terms make that field fall back to the original text.
+- **Style guide**: rules, banned words and 2 or 3 of your own texts for tone, editable in the app (defaults in `packages/core/src/style/style-guide.ts`). Em and en dashes are replaced in code; banned words are highlighted and can be fixed by sending only those sentences back to the LLM.
+- **PDF**: an ATS-friendly single-column HTML render printed by the browser ("Save as PDF"), so the text stays selectable.
+
 ## Self-hosting
 
 You need free accounts on Supabase, GitHub and Vercel (or Netlify).

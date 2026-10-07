@@ -5,3 +5,5 @@ export * from './dedupe';
 export * from './filter';
 export * from './llm';
 export * from './util/text';
+export * from './style/style-guide';
+export * from './resume/template';

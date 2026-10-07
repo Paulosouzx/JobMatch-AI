@@ -265,3 +265,105 @@ html.dark {
     transform: translateX(300%);
   }
 }
+
+.resume-doc {
+  background: #fff;
+  color: #111;
+  font-family: Arial, Helvetica, 'Liberation Sans', sans-serif;
+  font-size: 8pt;
+  line-height: 1.18;
+  padding: 8mm 10mm;
+  width: 210mm;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.resume-doc h1 {
+  font-size: 18pt;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin: 0 0 2px;
+}
+
+.resume-doc h2 {
+  font-size: 9.3pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-bottom: 1px solid #999;
+  padding-bottom: 2px;
+  margin: 6px 0 3px;
+}
+
+.resume-doc p {
+  margin: 0;
+}
+
+.resume-doc .resume-links,
+.resume-doc .resume-contact {
+  color: #333;
+}
+
+.resume-doc .resume-header {
+  border-bottom: 1px solid #999;
+  padding-bottom: 4px;
+}
+
+.resume-doc .resume-item {
+  margin-bottom: 3px;
+  break-inside: avoid;
+}
+
+.resume-doc .resume-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.resume-doc .resume-row span:last-child {
+  color: #444;
+  font-size: 7.7pt;
+  white-space: nowrap;
+}
+
+.resume-doc .resume-subtitle,
+.resume-doc .resume-stack {
+  font-size: 7.8pt;
+  color: #333;
+}
+
+.resume-doc .resume-stack-label {
+  font-size: 7.8pt;
+  font-weight: 700;
+}
+
+.resume-doc ul {
+  margin: 1px 0 0;
+  padding-left: 14px;
+  list-style: disc;
+}
+
+.resume-doc li {
+  margin: 0;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .resume-doc {
+    width: auto;
+    padding: 8mm 10mm;
+  }
+}

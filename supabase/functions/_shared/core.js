@@ -1,10 +1,15 @@
 // packages/core/src/prompts/cover-letter.v1.ts
-var COVER_LETTER_PROMPT_VERSION = "cover-letter.v1";
+var COVER_LETTER_PROMPT_VERSION = "cover-letter.v2";
 var COVER_LETTER_SYSTEM_PROMPT = `You write concise, honest cover letters. Rules:
-- 3 short paragraphs, maximum 220 words.
+- At most 3 short paragraphs, maximum 220 words.
 - Mention only skills and experience that appear in the candidate CV. Never invent facts.
 - Address the specific role and company; connect 2 or 3 concrete strengths to the job requirements.
 - Plain text only, no markdown, no placeholders for contact details, no subject line.`;
+function buildCoverLetterSystemPrompt(styleGuide) {
+  return styleGuide ? `${COVER_LETTER_SYSTEM_PROMPT}
+
+${styleGuide}` : COVER_LETTER_SYSTEM_PROMPT;
+}
 function buildCoverLetterUserPrompt(job, profile, cvText, language) {
   return [
     `Write the cover letter in ${language}.`,
@@ -24,8 +29,138 @@ function buildCoverLetterUserPrompt(job, profile, cvText, language) {
   ].join("\n");
 }
 
+// packages/core/src/prompts/fix-text.v1.ts
+function buildFixTextSystemPrompt(styleGuide) {
+  return `You rewrite individual sentences so they follow a style guide. Return ONLY a JSON object {"sentences": string[]} with exactly one rewritten sentence per input sentence, in the same order and the same language. Keep the meaning and every fact; do not add new facts, numbers or technologies.
+
+${styleGuide}`;
+}
+function buildFixTextUserPrompt(sentences, banned) {
+  return [
+    `Remove these words or expressions: ${banned.join("; ")}.`,
+    "",
+    JSON.stringify({ sentences }, null, 2)
+  ].join("\n");
+}
+
+// packages/core/src/prompts/resume-adapt.v1.ts
+var RESUME_ADAPT_PROMPT_VERSION = "resume-adapt.v1";
+function buildResumeAdaptSystemPrompt(styleGuide) {
+  return `You tailor CV text to a specific job posting. You receive a JSON object of CV fields and a job summary.
+
+Hard rules:
+- Return ONLY a JSON object with EXACTLY the same keys you received. No new keys, no removed keys, no nested objects.
+- Every value is a rewrite of the original value for that same key.
+- Use ONLY facts already present in that original value: do not add technologies, tools, numbers, results, employers, responsibilities or claims that are not in it.
+- You may reorder, shorten, rephrase and emphasise what matches the job. Keep each value at most 15% longer than its original.
+- Keep the same language as the original value.
+- If a value cannot be improved without inventing anything, return it unchanged.
+
+${styleGuide}
+
+Do not include markdown, code fences or any text outside the JSON object.`;
+}
+function buildResumeAdaptUserPrompt(jobSummary, fields) {
+  return ["## Job", jobSummary, "", "## CV fields (JSON)", JSON.stringify(fields, null, 2)].join(
+    "\n"
+  );
+}
+
+// packages/core/src/style/style-guide.ts
+var DEFAULT_STYLE_GUIDE = {
+  rules: [
+    "Use short, direct sentences.",
+    "Use concrete verbs (built, reduced, migrated, shipped) instead of vague ones.",
+    "Keep real numbers when the source text has them. Never add numbers that are not in the source.",
+    "No filler, no flourish, no closing sentence that repeats everything.",
+    "Cover letters have at most 3 short paragraphs.",
+    "Never use the em dash (\u2014) or the en dash (\u2013) inside sentences. Use a comma, a full stop or parentheses instead."
+  ],
+  bannedPhrases: [
+    "apaixonado por",
+    "apaixonada por",
+    "din\xE2mico",
+    "din\xE2mica",
+    "sinergia",
+    "alavancar",
+    "robusto",
+    "robusta",
+    "inovador",
+    "inovadora",
+    "jornada",
+    "mergulhar",
+    "no cen\xE1rio atual",
+    "em constante evolu\xE7\xE3o",
+    "al\xE9m disso",
+    "\xE9 importante ressaltar",
+    "n\xE3o apenas... mas tamb\xE9m",
+    "desbloquear",
+    "potencializar",
+    "passionate",
+    "leverage",
+    "delve",
+    "seamless",
+    "cutting-edge",
+    "spearheaded"
+  ],
+  samples: []
+};
+function fold(value) {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function phrasePattern(phrase) {
+  const parts = fold(phrase.trim()).split(/\s*(?:\.\.\.|…)\s*/).filter(Boolean).map((part) => escapeRegExp(part).replace(/\s+/g, "\\s+"));
+  const body = parts.join("[\\s\\S]{1,80}?");
+  return new RegExp(`(^|[^\\p{L}\\p{N}])(${body})(?=$|[^\\p{L}\\p{N}])`, "giu");
+}
+function findBannedPhrases(text, phrases) {
+  const folded = fold(text);
+  const hits = [];
+  for (const phrase of phrases) {
+    if (phrase.trim() === "") continue;
+    for (const match of folded.matchAll(phrasePattern(phrase))) {
+      const start = (match.index ?? 0) + (match[1]?.length ?? 0);
+      const end = start + (match[2]?.length ?? 0);
+      hits.push({ phrase, start, end, match: text.slice(start, end) });
+    }
+  }
+  return hits.sort((a, b) => a.start - b.start);
+}
+function replaceDashes(text) {
+  return text.replace(/(\d)\s*[–—]\s*(\d)/g, "$1-$2").replace(/\s*[—–]\s*([.,;:!?])/g, "$1").replace(/(^|\n)\s*[—–]\s*/g, "$1").replace(/\s*[—–]\s*/g, ", ").replace(/,\s*,/g, ",").replace(/[ \t]{2,}/g, " ");
+}
+function splitSentences(text) {
+  return text.split(/(?<=[.!?])\s+(?=[A-ZÀ-Ý0-9"“(])|\n+/u).map((sentence) => sentence.trim()).filter(Boolean);
+}
+function sentencesWithBannedPhrases(text, phrases) {
+  return splitSentences(text).filter((sentence) => findBannedPhrases(sentence, phrases).length > 0);
+}
+function formatStyleGuide(guide) {
+  const lines = ["Writing rules:", ...guide.rules.map((rule) => `- ${rule}`)];
+  if (guide.bannedPhrases.length > 0) {
+    lines.push(
+      "",
+      `Never use these words or expressions (in any language or inflection): ${guide.bannedPhrases.join("; ")}.`
+    );
+  }
+  const samples = guide.samples.map((sample) => sample.trim()).filter(Boolean).slice(0, 3);
+  if (samples.length > 0) {
+    lines.push(
+      "",
+      "Match the tone of these texts written by the candidate (tone only, do not copy content):"
+    );
+    samples.forEach(
+      (sample, index) => lines.push(`<sample ${index + 1}>`, sample.slice(0, 1500), `</sample ${index + 1}>`)
+    );
+  }
+  return lines.join("\n");
+}
+
 // packages/core/src/prompts/score.v1.ts
-var SCORE_PROMPT_VERSION = "score.v1";
+var SCORE_PROMPT_VERSION = "score.v2";
 var SCORE_SYSTEM_PROMPT = `You are a precise recruiting analyst. You compare one job posting with one candidate profile and return a strict JSON object.
 
 Scoring guide (score is an integer from 0 to 100):
@@ -42,9 +177,15 @@ Return ONLY a JSON object with exactly these keys:
   "missing_skills": string[],
   "seniority_fit": string,
   "location_fit": string,
-  "summary": string
+  "summary": string,
+  "language": string,
+  "work_mode": "remote" | "hybrid" | "onsite" | "unknown",
+  "salary": string | null,
+  "requirements_required": string[],
+  "requirements_nice": string[],
+  "benefits": string[]
 }
-"reasons" must contain 2 to 4 short reasons. "seniority_fit" is one of "good", "stretch", "overqualified", "unknown". "location_fit" is one of "good", "partial", "poor", "unknown". "summary" is one sentence.
+"reasons" must contain 2 to 4 short reasons. "seniority_fit" is one of "good", "stretch", "overqualified", "unknown". "location_fit" is one of "good", "partial", "poor", "unknown". "summary" is one sentence. "language" is the ISO 639-1 code of the job posting language (for example "en" or "pt"). "work_mode" comes from the posting. "salary" is the salary or range exactly as stated in the posting, or null. "requirements_required" lists the mandatory requirements, "requirements_nice" the nice-to-have ones and "benefits" what the company offers, each as short items copied or condensed from the posting (empty arrays when the posting does not say). Write these three lists in the language of the posting.
 Do not include markdown, code fences or any text outside the JSON object. Base the analysis only on the provided data.`;
 function buildScoreUserPrompt(job, profile, cvText, language) {
   return [
@@ -113,7 +254,13 @@ var matchScoreSchema = z.object({
   missing_skills: z.array(z.string()),
   seniority_fit: z.string(),
   location_fit: z.string(),
-  summary: z.string()
+  summary: z.string(),
+  language: z.string().optional(),
+  work_mode: z.enum(["remote", "hybrid", "onsite", "unknown"]).optional(),
+  salary: z.string().nullable().optional(),
+  requirements_required: z.array(z.string()).optional(),
+  requirements_nice: z.array(z.string()).optional(),
+  benefits: z.array(z.string()).optional()
 });
 var extractedProfileSchema = z.object({
   skills: z.array(z.string()).max(40),
@@ -275,6 +422,20 @@ function stripPii(text) {
 }
 
 // packages/core/src/llm/provider.ts
+var LANGUAGE_NAMES = {
+  pt: "Portuguese (Portugal)",
+  "pt-br": "Brazilian Portuguese",
+  en: "English",
+  es: "Spanish",
+  fr: "French",
+  de: "German",
+  it: "Italian",
+  nl: "Dutch"
+};
+function languageName(code, fallback) {
+  if (!code) return fallback;
+  return LANGUAGE_NAMES[code.toLowerCase()] ?? code;
+}
 function stripReasoning(text) {
   return text.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^[\s\S]*?<\/think>/i, "").trim();
 }
@@ -378,17 +539,77 @@ ${buildRepairPrompt(first, parsed.problem)}`,
       }
       throw new LLMParseError(`Invalid LLM output after retry: ${retried.problem}`, second);
     },
-    async draftCoverLetter(job, profile) {
+    async draftCoverLetter(job, profile, writing) {
       const cvText = stripPii(profile.cvText).slice(0, 8e3);
+      const guide = writing?.styleGuide ? formatStyleGuide(writing.styleGuide) : void 0;
       const text = await call(
         () => client.complete({
-          system: COVER_LETTER_SYSTEM_PROMPT,
-          user: buildCoverLetterUserPrompt(job, profile, cvText, language),
+          system: buildCoverLetterSystemPrompt(guide),
+          user: buildCoverLetterUserPrompt(
+            job,
+            profile,
+            cvText,
+            languageName(writing?.language, language)
+          ),
           json: false,
-          temperature: 0.6
+          temperature: 0.5
         })
       );
-      return { text: stripReasoning(text), model, promptVersion: COVER_LETTER_PROMPT_VERSION };
+      return {
+        text: replaceDashes(stripReasoning(text)),
+        model,
+        promptVersion: COVER_LETTER_PROMPT_VERSION
+      };
+    },
+    async adaptResume(fields, jobSummary, styleGuide) {
+      const system = buildResumeAdaptSystemPrompt(styleGuide ? formatStyleGuide(styleGuide) : "");
+      const user = buildResumeAdaptUserPrompt(jobSummary, fields);
+      const first = await call(
+        () => client.complete({ system, user, json: true, temperature: 0.3 })
+      );
+      try {
+        return { proposed: extractJson(first), model, promptVersion: RESUME_ADAPT_PROMPT_VERSION };
+      } catch (error) {
+        const second = await call(
+          () => client.complete({
+            system,
+            user: `${user}
+
+${buildRepairPrompt(first, error.message)}`,
+            json: true,
+            temperature: 0
+          })
+        );
+        try {
+          return {
+            proposed: extractJson(second),
+            model,
+            promptVersion: RESUME_ADAPT_PROMPT_VERSION
+          };
+        } catch (retryError) {
+          throw new LLMParseError(
+            `Invalid LLM output after retry: ${retryError.message}`,
+            second
+          );
+        }
+      }
+    },
+    async fixSentences(sentences, banned, styleGuide) {
+      const system = buildFixTextSystemPrompt(styleGuide ? formatStyleGuide(styleGuide) : "");
+      const text = await call(
+        () => client.complete({
+          system,
+          user: buildFixTextUserPrompt(sentences, banned),
+          json: true,
+          temperature: 0.2
+        })
+      );
+      const data = extractJson(text);
+      const fixed = Array.isArray(data.sentences) ? data.sentences : [];
+      if (fixed.length !== sentences.length || fixed.some((value) => typeof value !== "string")) {
+        throw new LLMParseError("The model did not return one sentence per input sentence", text);
+      }
+      return fixed.map((value) => replaceDashes(value.trim()));
     },
     async testConnection() {
       try {
@@ -408,15 +629,173 @@ ${buildRepairPrompt(first, parsed.problem)}`,
     }
   };
 }
+
+// packages/core/src/resume/template.ts
+import { z as z2 } from "zod";
+var resumeFieldKey = z2.string().regex(/^[a-z0-9_]+$/);
+var educationItem = z2.object({
+  school: z2.string(),
+  degree: z2.string(),
+  location: z2.string(),
+  dates: z2.string()
+});
+var skillGroup = z2.object({ label: z2.string(), field: resumeFieldKey });
+var experienceItem = z2.object({
+  heading: z2.string(),
+  dates: z2.string(),
+  subtitle: z2.string().optional(),
+  stackLabel: z2.string().optional(),
+  stackField: resumeFieldKey.optional(),
+  bullets: z2.array(resumeFieldKey)
+});
+var resumeSectionSchema = z2.discriminatedUnion("type", [
+  z2.object({ type: z2.literal("summary"), title: z2.string(), field: resumeFieldKey }),
+  z2.object({ type: z2.literal("education"), title: z2.string(), items: z2.array(educationItem) }),
+  z2.object({ type: z2.literal("skills"), title: z2.string(), groups: z2.array(skillGroup) }),
+  z2.object({ type: z2.literal("experience"), title: z2.string(), items: z2.array(experienceItem) }),
+  z2.object({ type: z2.literal("list"), title: z2.string(), items: z2.array(z2.string()) })
+]);
+var resumeStructureSchema = z2.object({
+  name: z2.string(),
+  links: z2.array(z2.string()),
+  contact: z2.string(),
+  sections: z2.array(resumeSectionSchema)
+});
+function fieldKeysOf(structure) {
+  const keys = [];
+  for (const section of structure.sections) {
+    if (section.type === "summary") keys.push(section.field);
+    if (section.type === "skills") keys.push(...section.groups.map((group) => group.field));
+    if (section.type === "experience") {
+      for (const item of section.items) {
+        if (item.stackField) keys.push(item.stackField);
+        keys.push(...item.bullets);
+      }
+    }
+  }
+  return keys;
+}
+var TECH_TOKEN = /[A-Za-z][A-Za-z0-9]*(?:[.#+/-][A-Za-z0-9#+]+)*/g;
+var COMMON_CAPITALIZED = /* @__PURE__ */ new Set([
+  "I",
+  "A",
+  "An",
+  "The",
+  "And",
+  "For",
+  "With",
+  "In",
+  "On",
+  "At",
+  "To",
+  "Of",
+  "By",
+  "From",
+  "As",
+  "Via",
+  "O",
+  "E",
+  "Em",
+  "De",
+  "Do",
+  "Da",
+  "Para",
+  "Com",
+  "Por",
+  "Na",
+  "No",
+  "Os",
+  "As",
+  "Um",
+  "Uma"
+]);
+function numbersIn(text) {
+  return [...text.matchAll(/\d+(?:[.,]\d+)?%?/g)].map((match) => match[0].replace(",", "."));
+}
+function techTermsIn(text) {
+  return [...text.matchAll(TECH_TOKEN)].map((match) => match[0]).filter((token, index, all) => {
+    if (COMMON_CAPITALIZED.has(token)) return false;
+    const startsSentence = index === 0;
+    const looksTechnical = /[A-Z].*[A-Z]|[.#+]|\d/.test(token) || /^[A-Z]/.test(token) && !startsSentence;
+    return looksTechnical && all.indexOf(token) === index;
+  });
+}
+function inventedContent(original, proposed, allowedContext = "") {
+  const reasons = [];
+  const originalNumbers = new Set(numbersIn(original));
+  const newNumbers = numbersIn(proposed).filter((value) => !originalNumbers.has(value));
+  if (newNumbers.length > 0) reasons.push(`new numbers: ${[...new Set(newNumbers)].join(", ")}`);
+  const known = `${original} ${allowedContext}`.toLowerCase();
+  const newTerms = techTermsIn(proposed).filter((term) => !known.includes(term.toLowerCase()));
+  if (newTerms.length > 0) reasons.push(`new terms: ${newTerms.slice(0, 5).join(", ")}`);
+  return reasons;
+}
+function reviewAdaptation(original, proposedRaw, options = {}) {
+  const maxGrowth = options.maxGrowth ?? 0.15;
+  const banned = options.bannedPhrases ?? [];
+  const proposed = proposedRaw && typeof proposedRaw === "object" && !Array.isArray(proposedRaw) ? proposedRaw : {};
+  const extraKeys = Object.keys(proposed).filter((key) => !(key in original));
+  const missingKeys = Object.keys(original).filter((key) => typeof proposed[key] !== "string");
+  const fields = Object.entries(original).map(([key, originalText]) => {
+    const raw = proposed[key];
+    if (typeof raw !== "string" || raw.trim() === "") {
+      return {
+        key,
+        original: originalText,
+        proposed: originalText,
+        accepted: false,
+        status: "rejected",
+        reasons: ["missing key"],
+        bannedHits: []
+      };
+    }
+    const cleaned = replaceDashes(raw.trim());
+    const reasons = [];
+    const limit = Math.ceil(originalText.length * (1 + maxGrowth));
+    if (cleaned.length > limit) reasons.push(`too long (${cleaned.length}/${limit} chars)`);
+    reasons.push(...inventedContent(originalText, cleaned, options.allowedContext));
+    if (reasons.length > 0) {
+      return {
+        key,
+        original: originalText,
+        proposed: cleaned,
+        accepted: false,
+        status: "rejected",
+        reasons,
+        bannedHits: findBannedPhrases(cleaned, banned)
+      };
+    }
+    const unchanged = cleaned === originalText.trim();
+    return {
+      key,
+      original: originalText,
+      proposed: cleaned,
+      accepted: !unchanged,
+      status: unchanged ? "unchanged" : "changed",
+      reasons: [],
+      bannedHits: findBannedPhrases(cleaned, banned)
+    };
+  });
+  return { fields, extraKeys, missingKeys };
+}
 export {
   DEFAULT_MODELS,
+  DEFAULT_STYLE_GUIDE,
   LLMParseError,
   LLMRequestError,
   RateLimitError,
   createChatClient,
   createLLMProvider,
   extractJson,
+  fieldKeysOf,
+  findBannedPhrases,
+  formatStyleGuide,
+  languageName,
   parseExtractedProfile,
   parseScore,
+  replaceDashes,
+  resumeStructureSchema,
+  reviewAdaptation,
+  sentencesWithBannedPhrases,
   stripPii
 };

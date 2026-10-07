@@ -3,26 +3,35 @@ import {
   Bookmark,
   CalendarDays,
   Check,
+  Banknote,
   Copy,
   ExternalLink,
+  FileText,
+  Gift,
+  ListChecks,
+  Wand2,
   Globe,
   Loader2,
   MapPin,
+  Laptop,
   Save,
   Sparkles,
   X,
 } from 'lucide-react';
+import { findBannedPhrases, replaceDashes, sentencesWithBannedPhrases } from '@jobmatch/core';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { ScoreBadge } from '@/components/app/ScoreBadge';
+import { HighlightedText } from '@/components/resume/HighlightedText';
 import { StatusBadge, type StatusTone } from '@/components/app/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { callFunction } from '@/lib/functions';
+import { loadStyleGuide } from '@/lib/resume';
 import {
   evaluationOf,
   matchOf,
@@ -81,7 +90,9 @@ export default function JobDetail() {
   const { jobId = '' } = useParams();
   const [status, setStatus] = useState<MatchStatus | null>(null);
   const [letter, setLetter] = useState('');
-  const [busy, setBusy] = useState<'generate' | 'save' | 'status' | null>(null);
+  const [busy, setBusy] = useState<'generate' | 'save' | 'status' | 'analyze' | 'fix' | null>(null);
+  const guide = useAsync(loadStyleGuide, []);
+  const banned = guide.data?.bannedPhrases ?? [];
 
   const detail = useAsync<Loaded>(async () => {
     const { data, error } = await supabase
@@ -198,10 +209,46 @@ export default function JobDetail() {
     toast.success(t('jobs.statusUpdated'), { description: t(`jobs.statuses.${next}`) });
   }
 
+  async function analyze() {
+    setBusy('analyze');
+    const id = toast.loading(t('jobs.analyzing'));
+    const { error } = await callFunction('ai', { action: 'analyze-job', jobId: job.id });
+    setBusy(null);
+    if (error) {
+      toast.error(t('jobs.analyzeFailed'), { id, description: error });
+      return;
+    }
+    toast.success(t('jobs.analyzed'), { id });
+    detail.reload();
+  }
+
+  async function fixLetter() {
+    const sentences = sentencesWithBannedPhrases(letter, banned);
+    if (sentences.length === 0) return;
+    setBusy('fix');
+    const id = toast.loading(t('adapt.fixing'));
+    const { data, error } = await callFunction<{ sentences: string[] }>('ai', {
+      action: 'fix-text',
+      sentences,
+    });
+    setBusy(null);
+    if (error || !data) {
+      toast.error(t('adapt.fixFailed'), { id, description: error ?? undefined });
+      return;
+    }
+    let next = letter;
+    sentences.forEach((sentence, index) => {
+      next = next.replace(sentence, data.sentences[index] ?? sentence);
+    });
+    setLetter(replaceDashes(next));
+    toast.success(t('adapt.fixed', { count: sentences.length }), { id });
+  }
+
   async function generate() {
     setBusy('generate');
     const id = toast.loading(t('jobs.generating'));
-    const { data, error } = await callFunction<{ text: string }>('generate-cover-letter', {
+    const { data, error } = await callFunction<{ text: string }>('ai', {
+      action: 'cover-letter',
       jobId: job.id,
     });
     setBusy(null);
@@ -271,6 +318,18 @@ export default function JobDetail() {
                   }),
                 })}
               </span>
+              {analysis?.work_mode && analysis.work_mode !== 'unknown' && (
+                <span className="inline-flex items-center gap-1">
+                  <Laptop className="size-4" aria-hidden="true" />
+                  {t(`profile.modes.${analysis.work_mode}`)}
+                </span>
+              )}
+              {analysis?.salary && (
+                <span className="inline-flex items-center gap-1 font-medium text-success">
+                  <Banknote className="size-4" aria-hidden="true" />
+                  {analysis.salary}
+                </span>
+              )}
               <span className="capitalize">{job.source}</span>
             </div>
           </div>
@@ -302,6 +361,12 @@ export default function JobDetail() {
             <Check />
             {t('jobs.markApplied')}
           </Button>
+          <Button asChild variant="outline" className="col-span-2 sm:col-span-1">
+            <Link to={`/app/jobs/${job.id}/resume`}>
+              <FileText />
+              {t('jobs.adaptResume')}
+            </Link>
+          </Button>
           {match && (
             <>
               <Button
@@ -324,6 +389,115 @@ export default function JobDetail() {
           )}
         </div>
       </Card>
+
+      {(() => {
+        const required = analysis?.requirements_required ?? [];
+        const nice = analysis?.requirements_nice ?? [];
+        const benefits = analysis?.benefits ?? [];
+        const hasDetails = analysis?.requirements_required !== undefined;
+        if (!hasDetails) {
+          return (
+            <Card className="flex-row flex-wrap items-center justify-between gap-3 p-5">
+              <div className="flex items-start gap-3">
+                <ListChecks className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+                <div>
+                  <p className="text-sm font-medium">{t('jobs.detailsMissing')}</p>
+                  <p className="text-xs text-muted-foreground">{t('jobs.detailsMissingHint')}</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => void analyze()}
+                className="w-full sm:w-auto"
+              >
+                {busy === 'analyze' ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                {t('jobs.analyzeJob')}
+              </Button>
+            </Card>
+          );
+        }
+        return (
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="gap-0 py-0">
+              <CardHeader className="border-b py-5">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ListChecks className="size-4 text-primary" aria-hidden="true" />
+                  {t('jobs.requirementsTitle')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 py-5 text-sm">
+                <div className="space-y-2">
+                  <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    {t('jobs.required')}
+                  </p>
+                  {required.length === 0 ? (
+                    <p className="text-muted-foreground">{t('jobs.notStated')}</p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {required.map((item) => (
+                        <li key={item} className="flex gap-2">
+                          <Check
+                            className="mt-0.5 size-4 shrink-0 text-primary"
+                            aria-hidden="true"
+                          />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                {nice.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                      {t('jobs.niceToHave')}
+                    </p>
+                    <ul className="space-y-1.5 text-muted-foreground">
+                      {nice.map((item) => (
+                        <li key={item} className="flex gap-2">
+                          <span
+                            className="mt-2 size-1.5 shrink-0 rounded-full bg-muted-foreground/60"
+                            aria-hidden="true"
+                          />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="gap-0 py-0">
+              <CardHeader className="border-b py-5">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <Gift className="size-4 text-primary" aria-hidden="true" />
+                  {t('jobs.offersTitle')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 py-5 text-sm">
+                {analysis?.salary && (
+                  <p className="flex items-center gap-2 font-medium">
+                    <Banknote className="size-4 text-success" aria-hidden="true" />
+                    {analysis.salary}
+                  </p>
+                )}
+                {benefits.length === 0 ? (
+                  <p className="text-muted-foreground">{t('jobs.notStated')}</p>
+                ) : (
+                  <ul className="space-y-1.5">
+                    {benefits.map((item) => (
+                      <li key={item} className="flex gap-2">
+                        <Check className="mt-0.5 size-4 shrink-0 text-success" aria-hidden="true" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        );
+      })()}
 
       <div className="grid gap-6 lg:grid-cols-5">
         <Card className="gap-0 py-0 lg:col-span-2">
@@ -417,6 +591,25 @@ export default function JobDetail() {
               className="min-h-56 text-sm leading-relaxed"
               aria-label={t('jobs.coverLetter')}
             />
+            {letter !== '' && findBannedPhrases(letter, banned).length > 0 && (
+              <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/5 p-3">
+                <p className="text-xs font-medium">
+                  {t('jobs.bannedFound', { count: findBannedPhrases(letter, banned).length })}
+                </p>
+                <p className="text-xs leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                  <HighlightedText text={letter} banned={banned} />
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={busy !== null}
+                  onClick={() => void fixLetter()}
+                >
+                  {busy === 'fix' ? <Loader2 className="animate-spin" /> : <Wand2 />}
+                  {t('adapt.fixBanned')}
+                </Button>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
               <Button
                 className="col-span-2 sm:col-span-1"

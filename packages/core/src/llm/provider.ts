@@ -1,9 +1,16 @@
 import type { FetchLike } from '../collectors/types';
 import {
+  buildCoverLetterSystemPrompt,
   buildCoverLetterUserPrompt,
   COVER_LETTER_PROMPT_VERSION,
-  COVER_LETTER_SYSTEM_PROMPT,
 } from '../prompts/cover-letter.v1';
+import { buildFixTextSystemPrompt, buildFixTextUserPrompt } from '../prompts/fix-text.v1';
+import {
+  buildResumeAdaptSystemPrompt,
+  buildResumeAdaptUserPrompt,
+  RESUME_ADAPT_PROMPT_VERSION,
+} from '../prompts/resume-adapt.v1';
+import { formatStyleGuide, replaceDashes, type StyleGuide } from '../style/style-guide';
 import {
   buildRepairPrompt,
   buildScoreUserPrompt,
@@ -51,10 +58,47 @@ export interface ProfileExtractResult {
   promptVersion: string;
 }
 
+export interface WritingOptions {
+  styleGuide?: StyleGuide;
+  language?: string;
+}
+
+export interface AdaptResult {
+  proposed: unknown;
+  model: string;
+  promptVersion: string;
+}
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  pt: 'Portuguese (Portugal)',
+  'pt-br': 'Brazilian Portuguese',
+  en: 'English',
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  nl: 'Dutch',
+};
+
+export function languageName(code: string | undefined, fallback: string): string {
+  if (!code) return fallback;
+  return LANGUAGE_NAMES[code.toLowerCase()] ?? code;
+}
+
 export interface LLMProvider {
   scoreJob(job: Job, profile: Profile): Promise<ScoreResult>;
   extractProfile(cvText: string): Promise<ProfileExtractResult>;
-  draftCoverLetter(job: Job, profile: Profile): Promise<CoverLetterResult>;
+  draftCoverLetter(
+    job: Job,
+    profile: Profile,
+    options?: WritingOptions,
+  ): Promise<CoverLetterResult>;
+  adaptResume(
+    fields: Record<string, string>,
+    jobSummary: string,
+    styleGuide?: StyleGuide,
+  ): Promise<AdaptResult>;
+  fixSentences(sentences: string[], banned: string[], styleGuide?: StyleGuide): Promise<string[]>;
   testConnection(): Promise<ConnectionResult>;
 }
 
@@ -190,17 +234,77 @@ export function createLLMProvider(config: LLMConfig, options: ProviderOptions): 
       throw new LLMParseError(`Invalid LLM output after retry: ${retried.problem}`, second);
     },
 
-    async draftCoverLetter(job, profile) {
+    async draftCoverLetter(job, profile, writing) {
       const cvText = stripPii(profile.cvText).slice(0, 8000);
+      const guide = writing?.styleGuide ? formatStyleGuide(writing.styleGuide) : undefined;
       const text = await call(() =>
         client.complete({
-          system: COVER_LETTER_SYSTEM_PROMPT,
-          user: buildCoverLetterUserPrompt(job, profile, cvText, language),
+          system: buildCoverLetterSystemPrompt(guide),
+          user: buildCoverLetterUserPrompt(
+            job,
+            profile,
+            cvText,
+            languageName(writing?.language, language),
+          ),
           json: false,
-          temperature: 0.6,
+          temperature: 0.5,
         }),
       );
-      return { text: stripReasoning(text), model, promptVersion: COVER_LETTER_PROMPT_VERSION };
+      return {
+        text: replaceDashes(stripReasoning(text)),
+        model,
+        promptVersion: COVER_LETTER_PROMPT_VERSION,
+      };
+    },
+
+    async adaptResume(fields, jobSummary, styleGuide) {
+      const system = buildResumeAdaptSystemPrompt(styleGuide ? formatStyleGuide(styleGuide) : '');
+      const user = buildResumeAdaptUserPrompt(jobSummary, fields);
+      const first = await call(() =>
+        client.complete({ system, user, json: true, temperature: 0.3 }),
+      );
+      try {
+        return { proposed: extractJson(first), model, promptVersion: RESUME_ADAPT_PROMPT_VERSION };
+      } catch (error) {
+        const second = await call(() =>
+          client.complete({
+            system,
+            user: `${user}\n\n${buildRepairPrompt(first, (error as Error).message)}`,
+            json: true,
+            temperature: 0,
+          }),
+        );
+        try {
+          return {
+            proposed: extractJson(second),
+            model,
+            promptVersion: RESUME_ADAPT_PROMPT_VERSION,
+          };
+        } catch (retryError) {
+          throw new LLMParseError(
+            `Invalid LLM output after retry: ${(retryError as Error).message}`,
+            second,
+          );
+        }
+      }
+    },
+
+    async fixSentences(sentences, banned, styleGuide) {
+      const system = buildFixTextSystemPrompt(styleGuide ? formatStyleGuide(styleGuide) : '');
+      const text = await call(() =>
+        client.complete({
+          system,
+          user: buildFixTextUserPrompt(sentences, banned),
+          json: true,
+          temperature: 0.2,
+        }),
+      );
+      const data = extractJson(text) as { sentences?: unknown };
+      const fixed = Array.isArray(data.sentences) ? data.sentences : [];
+      if (fixed.length !== sentences.length || fixed.some((value) => typeof value !== 'string')) {
+        throw new LLMParseError('The model did not return one sentence per input sentence', text);
+      }
+      return (fixed as string[]).map((value) => replaceDashes(value.trim()));
     },
 
     async testConnection() {

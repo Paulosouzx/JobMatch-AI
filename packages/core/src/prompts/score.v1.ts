@@ -1,6 +1,6 @@
 import type { Job, Profile } from '../types';
 
-export const SCORE_PROMPT_VERSION = 'score.v1';
+export const SCORE_PROMPT_VERSION = 'score.v2';
 
 export const SCORE_SYSTEM_PROMPT = `You are a precise recruiting analyst. You compare one job posting with one candidate profile and return a strict JSON object.
 
@@ -18,9 +18,15 @@ Return ONLY a JSON object with exactly these keys:
   "missing_skills": string[],
   "seniority_fit": string,
   "location_fit": string,
-  "summary": string
+  "summary": string,
+  "language": string,
+  "work_mode": "remote" | "hybrid" | "onsite" | "unknown",
+  "salary": string | null,
+  "requirements_required": string[],
+  "requirements_nice": string[],
+  "benefits": string[]
 }
-"reasons" must contain 2 to 4 short reasons. "seniority_fit" is one of "good", "stretch", "overqualified", "unknown". "location_fit" is one of "good", "partial", "poor", "unknown". "summary" is one sentence.
+"reasons" must contain 2 to 4 short reasons. "seniority_fit" is one of "good", "stretch", "overqualified", "unknown". "location_fit" is one of "good", "partial", "poor", "unknown". "summary" is one sentence. "language" is the ISO 639-1 code of the job posting language (for example "en" or "pt"). "work_mode" comes from the posting. "salary" is the salary or range exactly as stated in the posting, or null. "requirements_required" lists the mandatory requirements, "requirements_nice" the nice-to-have ones and "benefits" what the company offers, each as short items copied or condensed from the posting (empty arrays when the posting does not say). Write these three lists in the language of the posting.
 Do not include markdown, code fences or any text outside the JSON object. Base the analysis only on the provided data.`;
 
 export function buildScoreUserPrompt(

@@ -1,4 +1,13 @@
-import { Activity, Briefcase, Palette, Settings, UserRound, type LucideIcon } from 'lucide-react';
+import {
+  Activity,
+  Briefcase,
+  FileText,
+  Palette,
+  PenLine,
+  Settings,
+  UserRound,
+  type LucideIcon,
+} from 'lucide-react';
 
 export interface NavItem {
   to: string;
@@ -25,6 +34,8 @@ export const NAV_GROUPS: NavGroup[] = [
     labelKey: 'nav.groupAccount',
     items: [
       { to: '/app/profile', labelKey: 'nav.profile', icon: UserRound },
+      { to: '/app/resume', labelKey: 'nav.resume', icon: FileText },
+      { to: '/app/style', labelKey: 'nav.style', icon: PenLine },
       { to: '/app/settings', labelKey: 'nav.settings', icon: Settings },
       { to: '/app/design', labelKey: 'nav.design', icon: Palette, devOnly: true },
     ],
@@ -44,4 +55,7 @@ export function preloadAppPages(): void {
   void import('@/pages/Profile');
   void import('@/pages/Settings');
   void import('@/pages/Runs');
+  void import('@/pages/ResumeTemplate');
+  void import('@/pages/ResumeAdapt');
+  void import('@/pages/StyleGuide');
 }

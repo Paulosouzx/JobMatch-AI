@@ -14,6 +14,12 @@ export interface MatchSummary {
     seniority_fit?: string;
     location_fit?: string;
     summary?: string;
+    language?: string;
+    work_mode?: 'remote' | 'hybrid' | 'onsite' | 'unknown';
+    salary?: string | null;
+    requirements_required?: string[];
+    requirements_nice?: string[];
+    benefits?: string[];
   } | null;
   created_at?: string;
 }
