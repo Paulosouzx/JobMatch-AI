@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from 'motion/react';
 import { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AppBreadcrumbs } from '@/components/app/AppBreadcrumbs';
@@ -12,7 +11,6 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 
 export function AppLayout() {
   const { pathname } = useLocation();
-  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     preloadAppPages();
@@ -38,14 +36,12 @@ export function AppLayout() {
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-6xl">
             <Suspense fallback={<PageFallback />}>
-              <motion.div
+              <div
                 key={pathname}
-                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="animate-in duration-200 fade-in-0 slide-in-from-bottom-1"
               >
                 <Outlet />
-              </motion.div>
+              </div>
             </Suspense>
           </div>
         </main>

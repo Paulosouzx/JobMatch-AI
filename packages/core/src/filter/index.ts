@@ -25,15 +25,53 @@ export interface RuleResult {
 const pass: RuleResult = { passed: true, reason: null };
 const reject = (reason: string): RuleResult => ({ passed: false, reason });
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function termVariants(term: string): string[] {
+  const base = term.trim().toLowerCase();
+  if (base === '') return [];
+  const variants = new Set([base]);
+  if (/[\s_-]/.test(base)) {
+    const parts = base.split(/[\s_-]+/).filter(Boolean);
+    variants.add(parts.join(' '));
+    variants.add(parts.join('-'));
+    variants.add(parts.join(''));
+  }
+  return [...variants];
+}
+
 function includesTerm(haystack: string, term: string): boolean {
-  const needle = term.trim().toLowerCase();
-  if (needle === '') return false;
-  const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const boundary = /^[a-z0-9]/.test(needle) && /[a-z0-9]$/.test(needle);
-  const pattern = boundary
-    ? new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`)
-    : new RegExp(escaped);
-  return pattern.test(haystack);
+  const normalized = haystack.replace(/[_-]+/g, '-');
+  return termVariants(term).some((needle) => {
+    const boundary = /^[a-z0-9]/.test(needle) && /[a-z0-9]$/.test(needle);
+    const escaped = escapeRegExp(needle);
+    const pattern = boundary
+      ? new RegExp(`(^|[^a-z0-9])${escaped}($|[^a-z0-9])`)
+      : new RegExp(escaped);
+    return pattern.test(normalized);
+  });
+}
+
+function compactWords(text: string): string {
+  return text.replace(/([a-z0-9])[\s_-]+([a-z0-9])/g, '$1 $2');
+}
+
+function matchesKeyword(haystack: string, keyword: string): boolean {
+  if (includesTerm(haystack, keyword)) return true;
+  const joined = keyword
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+  if (joined.length < 5 || /[\s_-]/.test(keyword.trim())) return false;
+  const words = compactWords(haystack)
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean);
+  for (let i = 0; i < words.length - 1; i++) {
+    if (`${words[i]}${words[i + 1]}` === joined) return true;
+  }
+  return false;
 }
 
 export function applyRules(job: Job, profile: Profile): RuleResult {
@@ -45,11 +83,11 @@ export function applyRules(job: Job, profile: Profile): RuleResult {
   const haystack = `${job.title}\n${job.description}`.toLowerCase();
 
   for (const keyword of profile.excludeKeywords) {
-    if (includesTerm(haystack, keyword)) return reject(`excluded_keyword:${keyword}`);
+    if (matchesKeyword(haystack, keyword)) return reject(`excluded_keyword:${keyword}`);
   }
 
   const must = profile.mustKeywords.filter((keyword) => keyword.trim() !== '');
-  if (must.length > 0 && !must.some((keyword) => includesTerm(haystack, keyword))) {
+  if (must.length > 0 && !must.some((keyword) => matchesKeyword(haystack, keyword))) {
     return reject('missing_required_keyword');
   }
 

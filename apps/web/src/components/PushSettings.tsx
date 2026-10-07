@@ -89,7 +89,7 @@ export function PushSettings() {
               <span className="text-muted-foreground">{t('push.status')}</span>
               <StatusBadge tone={STATE_TONE[state]}>{t(`push.states.${state}`)}</StatusBadge>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">
               {state === 'enabled' ? (
                 <>
                   <Button
@@ -115,6 +115,7 @@ export function PushSettings() {
                 <Button
                   type="button"
                   variant="success"
+                  className="h-auto min-h-9 whitespace-normal"
                   disabled={busy !== null || state === 'denied'}
                   onClick={() => void run(enablePush, t('push.enabledToast'))}
                 >

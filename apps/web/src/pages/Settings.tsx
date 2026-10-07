@@ -210,16 +210,21 @@ function SecretField({
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex h-9 items-center gap-2 rounded-md border bg-muted/50 px-3 font-mono text-sm">
+          <span className="inline-flex h-9 w-full items-center gap-2 rounded-md border bg-muted/50 px-3 font-mono text-sm sm:w-auto">
             <CircleCheck className="size-4 text-success" aria-hidden="true" />
             ••••{last4}
           </span>
-          <Button type="button" variant="outline" onClick={() => setEditing(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            className="flex-1 sm:flex-none"
+            onClick={() => setEditing(true)}
+          >
             {t('common.replace')}
           </Button>
           <ConfirmDialog
             trigger={
-              <Button type="button" variant="destructive-outline">
+              <Button type="button" variant="destructive-outline" className="flex-1 sm:flex-none">
                 <Trash2 />
                 {t('common.remove')}
               </Button>
@@ -437,9 +442,9 @@ export default function Settings() {
         title={t('settings.title')}
         description={t('settings.description')}
         actions={
-          <div className="flex items-center gap-3 rounded-lg border px-3 py-2">
-            <div className="grid text-right">
-              <Label htmlFor="advanced-settings" className="justify-end">
+          <div className="flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 sm:w-auto">
+            <div className="grid text-left sm:text-right">
+              <Label htmlFor="advanced-settings" className="sm:justify-end">
                 {t('settings.advanced')}
               </Label>
               <span className="text-xs text-muted-foreground">{t('settings.advancedHint')}</span>
@@ -541,7 +546,7 @@ export default function Settings() {
             )}
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/40 px-4 py-3">
               <p className="text-xs text-muted-foreground">{t('settings.privacyNote')}</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap">
                 <Button
                   type="button"
                   variant="outline"
@@ -622,7 +627,7 @@ export default function Settings() {
                   key={type}
                   className="flex items-center justify-between rounded-lg border px-3 py-2.5"
                 >
-                  <Label htmlFor={`source-${type}`} className="font-normal capitalize">
+                  <Label htmlFor={`source-${type}`} className="font-normal">
                     {t(`settings.sourceNames.${type}`)}
                   </Label>
                   <Switch

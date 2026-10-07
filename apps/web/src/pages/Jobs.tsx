@@ -1,4 +1,4 @@
-import { Globe, MapPin, Radar, Search, SearchX, X } from 'lucide-react';
+import { Globe, MapPin, Radar, Search, SearchX, SlidersHorizontal, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -17,6 +17,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -132,6 +141,78 @@ export default function Jobs() {
     onlyRemote ||
     minScore !== '0';
 
+  const activeCount = [
+    evaluation !== ALL,
+    source !== ALL,
+    status !== ALL,
+    onlyRemote,
+    minScore !== '0',
+  ].filter(Boolean).length;
+
+  function renderControls(variant: 'mobile' | 'desktop') {
+    return (
+      <>
+        <Select value={minScore} onValueChange={setMinScore}>
+          <SelectTrigger className="w-full md:w-40" aria-label={t('jobs.minScore')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {SCORE_STEPS.map((value) => (
+              <SelectItem key={value} value={value}>
+                {value === '0' ? t('jobs.anyScore') : t('jobs.scoreAtLeast', { value })}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={source} onValueChange={setSource}>
+          <SelectTrigger className="w-full md:w-40" aria-label={t('jobs.source')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{t('jobs.allSources')}</SelectItem>
+            {SOURCES.map((item) => (
+              <SelectItem key={item} value={item} className="capitalize">
+                {item}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-full md:w-44" aria-label={t('jobs.status')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL}>{t('jobs.allStatuses')}</SelectItem>
+            {STATUSES.map((item) => (
+              <SelectItem key={item} value={item}>
+                {t(`jobs.statuses.${item}`)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={sort} onValueChange={(value) => setSort(value as 'recent' | 'score')}>
+          <SelectTrigger className="w-full md:w-40" aria-label={t('jobs.sort')}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="recent">{t('jobs.sortRecent')}</SelectItem>
+            <SelectItem value="score">{t('jobs.sortScore')}</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex h-9 items-center gap-2 rounded-md border px-3">
+          <Switch
+            id={`only-remote-${variant}`}
+            checked={onlyRemote}
+            onCheckedChange={setOnlyRemote}
+          />
+          <Label htmlFor={`only-remote-${variant}`} className="font-normal">
+            {t('jobs.onlyRemote')}
+          </Label>
+        </div>
+      </>
+    );
+  }
+
   function clearFilters() {
     setQuery('');
     setEvaluation(ALL);
@@ -154,7 +235,7 @@ export default function Jobs() {
 
       <div className="space-y-3">
         <Tabs value={evaluation} onValueChange={setEvaluation}>
-          <TabsList className="h-auto flex-wrap">
+          <TabsList className="w-full justify-start overflow-x-auto md:w-fit [&>button]:flex-none">
             <TabsTrigger value={ALL} className="gap-2">
               {t('jobs.allEvaluations')}
               <Badge variant="secondary" className="tabular-nums">
@@ -172,7 +253,7 @@ export default function Jobs() {
           </TabsList>
         </Tabs>
 
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="flex gap-2">
           <div className="relative flex-1">
             <Search
               className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
@@ -186,72 +267,49 @@ export default function Jobs() {
               className="pl-9"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-            <Select value={minScore} onValueChange={setMinScore}>
-              <SelectTrigger className="w-full sm:w-40" aria-label={t('jobs.minScore')}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SCORE_STEPS.map((value) => (
-                  <SelectItem key={value} value={value}>
-                    {value === '0' ? t('jobs.anyScore') : t('jobs.scoreAtLeast', { value })}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={source} onValueChange={setSource}>
-              <SelectTrigger className="w-full sm:w-40" aria-label={t('jobs.source')}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>{t('jobs.allSources')}</SelectItem>
-                {SOURCES.map((item) => (
-                  <SelectItem key={item} value={item} className="capitalize">
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger className="w-full sm:w-44" aria-label={t('jobs.status')}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>{t('jobs.allStatuses')}</SelectItem>
-                {STATUSES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {t(`jobs.statuses.${item}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={sort} onValueChange={(value) => setSort(value as 'recent' | 'score')}>
-              <SelectTrigger className="w-full sm:w-40" aria-label={t('jobs.sort')}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="recent">{t('jobs.sortRecent')}</SelectItem>
-                <SelectItem value="score">{t('jobs.sortScore')}</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="col-span-2 flex h-9 items-center gap-2 rounded-md border px-3 sm:col-span-1">
-              <Switch id="only-remote" checked={onlyRemote} onCheckedChange={setOnlyRemote} />
-              <Label htmlFor="only-remote" className="font-normal">
-                {t('jobs.onlyRemote')}
-              </Label>
-            </div>
-            {filtersActive && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={clearFilters}
-                className="col-span-2 sm:col-span-1"
-              >
-                <X />
-                {t('jobs.clearFilters')}
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="md:hidden" aria-label={t('jobs.filters')}>
+                <SlidersHorizontal />
+                {t('jobs.filters')}
+                {activeCount > 0 && (
+                  <Badge className="ml-0.5 h-5 min-w-5 rounded-full px-1.5 tabular-nums">
+                    {activeCount}
+                  </Badge>
+                )}
               </Button>
-            )}
-          </div>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="max-h-[85vh] rounded-t-2xl">
+              <SheetHeader>
+                <SheetTitle>{t('jobs.filters')}</SheetTitle>
+              </SheetHeader>
+              <div className="grid gap-3 overflow-y-auto px-4">{renderControls('mobile')}</div>
+              <SheetFooter className="flex-row gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={clearFilters}
+                  disabled={!filtersActive}
+                >
+                  {t('jobs.clearFilters')}
+                </Button>
+                <SheetClose asChild>
+                  <Button className="flex-1">
+                    {t('jobs.showResults', { count: rows.length })}
+                  </Button>
+                </SheetClose>
+              </SheetFooter>
+            </SheetContent>
+          </Sheet>
+        </div>
+        <div className="hidden flex-wrap items-center gap-2 md:flex">
+          {renderControls('desktop')}
+          {filtersActive && (
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <X />
+              {t('jobs.clearFilters')}
+            </Button>
+          )}
         </div>
       </div>
 

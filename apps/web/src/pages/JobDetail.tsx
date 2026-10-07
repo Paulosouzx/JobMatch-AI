@@ -1,20 +1,60 @@
+import {
+  ArrowLeft,
+  Bookmark,
+  CalendarDays,
+  Check,
+  Copy,
+  ExternalLink,
+  Globe,
+  Loader2,
+  MapPin,
+  Save,
+  Sparkles,
+  X,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Alert, Button, Card, ScoreBadge, Spinner, Textarea } from '../components/legacy-ui';
-import { evaluationOf, matchOf, type JobRow, type MatchStatus } from '../lib/jobs';
-import { supabase } from '../lib/supabase';
-import { useAsync } from '../lib/useAsync';
+import { toast } from 'sonner';
+import { ScoreBadge } from '@/components/app/ScoreBadge';
+import { StatusBadge, type StatusTone } from '@/components/app/StatusBadge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
+import { callFunction } from '@/lib/functions';
+import {
+  evaluationOf,
+  matchOf,
+  type EvaluationState,
+  type JobRow,
+  type MatchStatus,
+} from '@/lib/jobs';
+import { supabase } from '@/lib/supabase';
+import { useAsync } from '@/lib/useAsync';
 
-function Chips({ items, tone }: { items: string[]; tone: 'good' | 'bad' }) {
+type Loaded =
+  { kind: 'job'; job: JobRow; letter: string } | { kind: 'redirect'; jobId: string } | null;
+
+const EVALUATION_TONE: Record<EvaluationState, StatusTone> = {
+  scored: 'success',
+  pending: 'primary',
+  filtered: 'neutral',
+  error: 'danger',
+};
+
+function Chips({ items, tone }: { items: string[]; tone: 'success' | 'danger' }) {
   const style =
-    tone === 'good'
-      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
-      : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300';
+    tone === 'success'
+      ? 'bg-success/10 text-success ring-success/20'
+      : 'bg-destructive/10 text-destructive ring-destructive/20';
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((item) => (
-        <span key={item} className={`rounded-full px-2.5 py-1 text-xs ${style}`}>
+        <span
+          key={item}
+          className={`rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${style}`}
+        >
           {item}
         </span>
       ))}
@@ -22,16 +62,26 @@ function Chips({ items, tone }: { items: string[]; tone: 'good' | 'bad' }) {
   );
 }
 
-type Loaded =
-  { kind: 'job'; job: JobRow; letter: string } | { kind: 'redirect'; jobId: string } | null;
+function DetailSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Skeleton className="h-4 w-28" />
+      <div className="space-y-3 rounded-xl border p-6">
+        <Skeleton className="h-7 w-2/3" />
+        <Skeleton className="h-4 w-1/3" />
+        <Skeleton className="h-9 w-full sm:w-96" />
+      </div>
+      <Skeleton className="h-48 w-full rounded-xl" />
+    </div>
+  );
+}
 
 export default function JobDetail() {
   const { t } = useTranslation();
   const { jobId = '' } = useParams();
   const [status, setStatus] = useState<MatchStatus | null>(null);
   const [letter, setLetter] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [message, setMessage] = useState<{ kind: 'success' | 'error'; text: string } | null>(null);
+  const [busy, setBusy] = useState<'generate' | 'save' | 'status' | null>(null);
 
   const detail = useAsync<Loaded>(async () => {
     const { data, error } = await supabase
@@ -79,9 +129,30 @@ export default function JobDetail() {
     }
   }, [loaded]);
 
-  if (detail.loading) return <Spinner label={t('common.loading')} />;
-  if (detail.error) return <Alert>{detail.error}</Alert>;
-  if (!loaded) return <Alert>{t('jobs.notFound')}</Alert>;
+  if (detail.loading) return <DetailSkeleton />;
+  if (detail.error) {
+    return (
+      <p
+        role="alert"
+        className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive"
+      >
+        {detail.error}
+      </p>
+    );
+  }
+  if (!loaded) {
+    return (
+      <div className="space-y-4">
+        <Button asChild variant="ghost" size="sm" className="-ml-2">
+          <Link to="/app">
+            <ArrowLeft />
+            {t('jobs.backToJobs')}
+          </Link>
+        </Button>
+        <p className="text-sm text-muted-foreground">{t('jobs.notFound')}</p>
+      </div>
+    );
+  }
   if (loaded.kind === 'redirect') return <Navigate to={`/app/jobs/${loaded.jobId}`} replace />;
 
   const job = loaded.job;
@@ -93,12 +164,17 @@ export default function JobDetail() {
   }
 
   async function changeStatus(next: MatchStatus) {
+    setBusy('status');
     if (match) {
       const { error } = await supabase
         .from('jm_job_matches')
         .update({ status: next })
         .eq('id', match.id);
-      if (error) return setMessage({ kind: 'error', text: error.message });
+      if (error) {
+        setBusy(null);
+        toast.error(t('common.error'), { description: error.message });
+        return;
+      }
       setStatus(next);
     }
     if (next === 'applied') {
@@ -111,166 +187,271 @@ export default function JobDetail() {
         },
         { onConflict: 'job_id' },
       );
-      if (error) return setMessage({ kind: 'error', text: error.message });
-      if (!match) setMessage({ kind: 'success', text: t('jobs.statuses.applied') });
+      if (error) {
+        setBusy(null);
+        toast.error(t('common.error'), { description: error.message });
+        return;
+      }
+      if (!match) setStatus('applied');
     }
+    setBusy(null);
+    toast.success(t('jobs.statusUpdated'), { description: t(`jobs.statuses.${next}`) });
   }
 
   async function generate() {
-    setGenerating(true);
-    setMessage(null);
-    const { data, error } = await supabase.functions.invoke('generate-cover-letter', {
-      body: { jobId: job.id },
+    setBusy('generate');
+    const id = toast.loading(t('jobs.generating'));
+    const { data, error } = await callFunction<{ text: string }>('generate-cover-letter', {
+      jobId: job.id,
     });
-    setGenerating(false);
+    setBusy(null);
     if (error || !data || typeof data.text !== 'string') {
-      setMessage({
-        kind: 'error',
-        text: typeof data?.error === 'string' ? data.error : t('common.error'),
-      });
+      toast.error(t('jobs.letterFailed'), { id, description: error ?? undefined });
       return;
     }
     setLetter(data.text);
+    toast.success(t('jobs.letterGenerated'), { id });
   }
 
   async function saveLetter() {
+    setBusy('save');
     const { error } = await supabase
       .from('jm_applications')
       .upsert(
         { user_id: await userId(), job_id: job.id, cover_letter: letter },
         { onConflict: 'job_id' },
       );
-    setMessage(
-      error ? { kind: 'error', text: error.message } : { kind: 'success', text: t('common.saved') },
-    );
+    setBusy(null);
+    if (error) toast.error(t('common.error'), { description: error.message });
+    else toast.success(t('jobs.letterSaved'));
   }
 
   async function copyLetter() {
     await navigator.clipboard.writeText(letter);
-    setMessage({ kind: 'success', text: t('common.copied') });
+    toast.success(t('jobs.copied'));
   }
 
-  return (
-    <div className="space-y-5">
-      <Link to="/app" className="text-sm text-brand-600 hover:underline">
-        {t('common.back')}
-      </Link>
+  const posted = job.posted_at ?? job.created_at;
 
-      <Card className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-semibold">{job.title}</h1>
-            <p className="text-slate-500">
-              {job.company}
-              {job.location ? ` · ${job.location}` : ''}
-              {job.remote ? ` · ${t('jobs.remote')}` : ''}
-            </p>
+  return (
+    <div className="space-y-6">
+      <Button asChild variant="ghost" size="sm" className="-ml-2">
+        <Link to="/app">
+          <ArrowLeft />
+          {t('jobs.backToJobs')}
+        </Link>
+      </Button>
+
+      <Card className="gap-5 p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-2">
+            <h1 className="text-xl font-semibold tracking-tight break-words sm:text-2xl">
+              {job.title}
+            </h1>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">{job.company}</span>
+              {job.location && (
+                <span className="inline-flex items-center gap-1">
+                  <MapPin className="size-4" aria-hidden="true" />
+                  {job.location}
+                </span>
+              )}
+              {job.remote && (
+                <span className="inline-flex items-center gap-1">
+                  <Globe className="size-4" aria-hidden="true" />
+                  {t('jobs.remote')}
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1 tabular-nums">
+                <CalendarDays className="size-4" aria-hidden="true" />
+                {t('jobs.postedOn', {
+                  date: new Date(posted).toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: 'short',
+                  }),
+                })}
+              </span>
+              <span className="capitalize">{job.source}</span>
+            </div>
           </div>
-          {state === 'scored' ? (
-            <ScoreBadge score={match?.score ?? null} />
-          ) : (
-            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-              {t(`jobs.evaluations.${state}`)}
-            </span>
-          )}
+          <div className="flex shrink-0 flex-col items-end gap-2">
+            {state === 'scored' && match?.score !== null && match?.score !== undefined ? (
+              <ScoreBadge score={match.score} className="h-9 min-w-14 text-base" />
+            ) : (
+              <StatusBadge tone={EVALUATION_TONE[state]}>
+                {t(`jobs.evaluations.${state}`)}
+              </StatusBadge>
+            )}
+            {status && <StatusBadge tone="neutral">{t(`jobs.statuses.${status}`)}</StatusBadge>}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <a
-            href={job.url}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500"
-          >
-            {t('jobs.openJob')}
-          </a>
+
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+          <Button asChild className="col-span-2 sm:col-span-1">
+            <a href={job.url} target="_blank" rel="noreferrer noopener">
+              <ExternalLink />
+              {t('jobs.openJob')}
+            </a>
+          </Button>
           <Button
-            variant="secondary"
-            disabled={status === 'applied'}
+            variant="success"
+            disabled={busy !== null || status === 'applied'}
             onClick={() => void changeStatus('applied')}
+            className="col-span-2 sm:col-span-1"
           >
+            <Check />
             {t('jobs.markApplied')}
           </Button>
           {match && (
             <>
-              <Button variant="secondary" onClick={() => void changeStatus('saved')}>
+              <Button
+                variant="outline"
+                disabled={busy !== null}
+                onClick={() => void changeStatus('saved')}
+              >
+                <Bookmark />
                 {t('jobs.save')}
               </Button>
-              <Button variant="ghost" onClick={() => void changeStatus('discarded')}>
+              <Button
+                variant="destructive-outline"
+                disabled={busy !== null}
+                onClick={() => void changeStatus('discarded')}
+              >
+                <X />
                 {t('jobs.discard')}
               </Button>
             </>
           )}
-          {status && (
-            <span className="self-center text-sm text-slate-500">
-              {t(`jobs.statuses.${status}`)}
-            </span>
-          )}
         </div>
       </Card>
 
-      <Card className="space-y-3">
-        <h2 className="font-semibold">{t('jobs.analysis')}</h2>
-        {state === 'pending' && (
-          <p className="text-sm text-slate-500">{t('jobs.pendingAnalysis')}</p>
-        )}
-        {state === 'filtered' && (
-          <p className="text-sm text-slate-500">
-            {t('jobs.filteredAnalysis', { reason: job.reject_reason ?? '-' })}
-          </p>
-        )}
-        {state === 'error' && (
-          <p className="text-sm text-slate-500">{match?.error ?? t('jobs.noScore')}</p>
-        )}
-        {analysis?.summary && <p>{analysis.summary}</p>}
-        {analysis?.reasons && (
-          <ul className="list-disc space-y-1 pl-5 text-sm">
-            {analysis.reasons.map((reason) => (
-              <li key={reason}>{reason}</li>
-            ))}
-          </ul>
-        )}
-        {analysis?.matched_skills && analysis.matched_skills.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium">{t('jobs.matched')}</p>
-            <Chips items={analysis.matched_skills} tone="good" />
-          </div>
-        )}
-        {analysis?.missing_skills && analysis.missing_skills.length > 0 && (
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium">{t('jobs.missing')}</p>
-            <Chips items={analysis.missing_skills} tone="bad" />
-          </div>
-        )}
-        {analysis && (
-          <p className="text-sm text-slate-500">
-            {t('jobs.seniorityFit')}: {analysis.seniority_fit ?? '-'} · {t('jobs.locationFit')}:{' '}
-            {analysis.location_fit ?? '-'}
-          </p>
-        )}
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-5">
+        <Card className="gap-0 py-0 lg:col-span-2">
+          <CardHeader className="border-b py-5">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Sparkles className="size-4 text-primary" aria-hidden="true" />
+              {t('jobs.analysis')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-5 py-5">
+            {state === 'pending' && (
+              <p className="text-sm text-muted-foreground">{t('jobs.pendingAnalysis')}</p>
+            )}
+            {state === 'filtered' && (
+              <p className="text-sm text-muted-foreground">
+                {t('jobs.filteredAnalysis', { reason: job.reject_reason ?? '-' })}
+              </p>
+            )}
+            {state === 'error' && (
+              <p className="text-sm break-words text-muted-foreground">
+                {match?.error ?? t('jobs.noScore')}
+              </p>
+            )}
+            {analysis?.summary && <p className="text-sm leading-relaxed">{analysis.summary}</p>}
+            {analysis?.reasons && analysis.reasons.length > 0 && (
+              <ul className="space-y-2 text-sm">
+                {analysis.reasons.map((reason) => (
+                  <li key={reason} className="flex gap-2">
+                    <span
+                      className="mt-2 size-1.5 shrink-0 rounded-full bg-primary"
+                      aria-hidden="true"
+                    />
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {analysis?.matched_skills && analysis.matched_skills.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  {t('jobs.matched')}
+                </p>
+                <Chips items={analysis.matched_skills} tone="success" />
+              </div>
+            )}
+            {analysis?.missing_skills && analysis.missing_skills.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                  {t('jobs.missing')}
+                </p>
+                <Chips items={analysis.missing_skills} tone="danger" />
+              </div>
+            )}
+            {analysis && (
+              <dl className="grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-lg bg-muted/50 px-3 py-2">
+                  <dt className="text-xs text-muted-foreground">{t('jobs.seniorityFit')}</dt>
+                  <dd className="font-medium">
+                    {analysis.seniority_fit
+                      ? t(`jobs.fit.${analysis.seniority_fit}`, {
+                          defaultValue: analysis.seniority_fit,
+                        })
+                      : '—'}
+                  </dd>
+                </div>
+                <div className="rounded-lg bg-muted/50 px-3 py-2">
+                  <dt className="text-xs text-muted-foreground">{t('jobs.locationFit')}</dt>
+                  <dd className="font-medium">
+                    {analysis.location_fit
+                      ? t(`jobs.fit.${analysis.location_fit}`, {
+                          defaultValue: analysis.location_fit,
+                        })
+                      : '—'}
+                  </dd>
+                </div>
+              </dl>
+            )}
+          </CardContent>
+        </Card>
 
-      <Card className="space-y-3">
-        <h2 className="font-semibold">{t('jobs.coverLetter')}</h2>
-        <Textarea rows={12} value={letter} onChange={(e) => setLetter(e.target.value)} />
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={generating} onClick={() => void generate()}>
-            {generating ? t('jobs.generating') : t('jobs.generateLetter')}
-          </Button>
-          <Button variant="secondary" disabled={letter === ''} onClick={() => void saveLetter()}>
-            {t('jobs.saveLetter')}
-          </Button>
-          <Button variant="secondary" disabled={letter === ''} onClick={() => void copyLetter()}>
-            {t('common.copy')}
-          </Button>
-        </div>
-        {message && <Alert kind={message.kind}>{message.text}</Alert>}
-      </Card>
+        <Card className="gap-0 py-0 lg:col-span-3">
+          <CardHeader className="border-b py-5">
+            <CardTitle className="text-base">{t('jobs.coverLetter')}</CardTitle>
+            <CardDescription>{t('jobs.letterHint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 py-5">
+            <Textarea
+              value={letter}
+              onChange={(e) => setLetter(e.target.value)}
+              placeholder={t('jobs.letterEmpty')}
+              className="min-h-56 text-sm leading-relaxed"
+              aria-label={t('jobs.coverLetter')}
+            />
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+              <Button
+                className="col-span-2 sm:col-span-1"
+                disabled={busy !== null}
+                onClick={() => void generate()}
+              >
+                {busy === 'generate' ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                {busy === 'generate' ? t('jobs.generating') : t('jobs.generateLetter')}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={letter === '' || busy !== null}
+                onClick={() => void saveLetter()}
+              >
+                {busy === 'save' ? <Loader2 className="animate-spin" /> : <Save />}
+                {t('jobs.saveLetter')}
+              </Button>
+              <Button variant="outline" disabled={letter === ''} onClick={() => void copyLetter()}>
+                <Copy />
+                {t('common.copy')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <Card className="space-y-2">
-        <h2 className="font-semibold">{t('jobs.description')}</h2>
-        <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-300">
-          {job.description}
-        </p>
+      <Card className="gap-0 py-0">
+        <CardHeader className="border-b py-5">
+          <CardTitle className="text-base">{t('jobs.description')}</CardTitle>
+        </CardHeader>
+        <CardContent className="py-5">
+          <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-muted-foreground">
+            {job.description}
+          </p>
+        </CardContent>
       </Card>
     </div>
   );

@@ -73,3 +73,36 @@ describe('partitionByRules', () => {
     expect(rejected[0]?.reason).toBe('ignored_company');
   });
 });
+
+describe('keyword variants', () => {
+  it('treats fullstack, full-stack and full stack as the same keyword', () => {
+    const profile = makeProfile({ mustKeywords: ['fullstack'] });
+    for (const title of [
+      'Full Stack Developer',
+      'Full-Stack Engineer',
+      'Fullstack Dev',
+      'full_stack role',
+    ]) {
+      expect(applyRules(makeJob({ title, description: '' }), profile).passed).toBe(true);
+    }
+    const spaced = makeProfile({ mustKeywords: ['full stack'] });
+    expect(
+      applyRules(makeJob({ title: 'Fullstack Engineer', description: '' }), spaced).passed,
+    ).toBe(true);
+    expect(
+      applyRules(makeJob({ title: 'Full-stack Engineer', description: '' }), spaced).passed,
+    ).toBe(true);
+  });
+
+  it('still respects word boundaries', () => {
+    const profile = makeProfile({ excludeKeywords: ['java'] });
+    expect(applyRules(makeJob({ description: 'JavaScript only' }), profile).passed).toBe(true);
+    const front = makeProfile({ mustKeywords: ['frontend'] });
+    expect(
+      applyRules(makeJob({ title: 'Front-end Developer', description: '' }), front).passed,
+    ).toBe(true);
+    expect(
+      applyRules(makeJob({ title: 'Front End Developer', description: '' }), front).passed,
+    ).toBe(true);
+  });
+});

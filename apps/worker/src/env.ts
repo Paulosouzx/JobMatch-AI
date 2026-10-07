@@ -10,7 +10,11 @@ export interface WorkerEnv {
 
 function required(name: string): string {
   const value = process.env[name];
-  if (!value) throw new Error(`Missing required environment variable ${name}`);
+  if (!value) {
+    throw new Error(
+      `Missing required environment variable ${name}. Add it as a repository secret in GitHub: Settings > Secrets and variables > Actions > New repository secret.`,
+    );
+  }
   return value;
 }
 
