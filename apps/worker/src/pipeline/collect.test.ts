@@ -38,3 +38,32 @@ describe('buildCollectTasks', () => {
     expect(withKeys.map((t) => t.id)).toEqual(expect.arrayContaining(['adzuna', 'itjobs']));
   });
 });
+
+describe('LinkedIn source', () => {
+  it('is off by default and only runs when enabled with searches', () => {
+    const none = buildCollectTasks(
+      [],
+      { adzuna_app_id: null },
+      { adzunaKey: null, itjobsKey: null },
+    );
+    expect(none.map((t) => t.id)).not.toContain('linkedin');
+    const empty = buildCollectTasks(
+      [{ type: 'linkedin', enabled: true, config: { searches: [] } }],
+      { adzuna_app_id: null },
+      { adzunaKey: null, itjobsKey: null },
+    );
+    expect(empty.map((t) => t.id)).not.toContain('linkedin');
+    const on = buildCollectTasks(
+      [
+        {
+          type: 'linkedin',
+          enabled: true,
+          config: { searches: ['full stack'], location: 'Portugal' },
+        },
+      ],
+      { adzuna_app_id: null },
+      { adzunaKey: null, itjobsKey: null },
+    );
+    expect(on.map((t) => t.id)).toContain('linkedin');
+  });
+});

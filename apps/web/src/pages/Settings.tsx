@@ -7,6 +7,7 @@ import {
   Plus,
   Save,
   Trash2,
+  TriangleAlert,
 } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -50,6 +51,7 @@ const SOURCE_TYPES = [
   'arbeitnow',
   'remoteok',
   'netempregos',
+  'linkedin',
   'greenhouse',
   'lever',
   'adzuna',
@@ -72,6 +74,9 @@ interface SourcesForm {
   greenhouse: string;
   lever: string;
   netempregos: string;
+  linkedinSearches: string;
+  linkedinLocation: string;
+  linkedinRemoteOnly: boolean;
   adzunaCountry: string;
   adzunaQuery: string;
   itjobsQuery: string;
@@ -89,10 +94,13 @@ const EMPTY_SETTINGS: SettingsForm = {
 };
 
 const EMPTY_SOURCES: SourcesForm = {
-  enabled: Object.fromEntries(SOURCE_TYPES.map((type) => [type, true])),
+  enabled: Object.fromEntries(SOURCE_TYPES.map((type) => [type, type !== 'linkedin'])),
   greenhouse: '',
   lever: '',
   netempregos: '',
+  linkedinSearches: '',
+  linkedinLocation: 'Portugal',
+  linkedinRemoteOnly: false,
   adzunaCountry: 'pt',
   adzunaQuery: '',
   itjobsQuery: '',
@@ -321,6 +329,11 @@ export default function Settings() {
       if (source.type === 'greenhouse')
         next.greenhouse = formatList(asStrings(config.companies), '\n');
       if (source.type === 'lever') next.lever = formatList(asStrings(config.companies), '\n');
+      if (source.type === 'linkedin') {
+        next.linkedinSearches = formatList(asStrings(config.searches), '\n');
+        next.linkedinLocation = typeof config.location === 'string' ? config.location : 'Portugal';
+        next.linkedinRemoteOnly = config.remoteOnly === true;
+      }
       if (source.type === 'netempregos')
         next.netempregos = formatList(asStrings(config.categories), '\n');
       if (source.type === 'adzuna') {
@@ -359,6 +372,14 @@ export default function Settings() {
     const rows = [
       ...['remotive', 'arbeitnow', 'remoteok'].map((type) => ({ type, config: {} })),
       { type: 'netempregos', config: { categories: parseList(sources.netempregos) } },
+      {
+        type: 'linkedin',
+        config: {
+          searches: parseList(sources.linkedinSearches).slice(0, 3),
+          location: sources.linkedinLocation.trim() || 'Portugal',
+          remoteOnly: sources.linkedinRemoteOnly,
+        },
+      },
       { type: 'greenhouse', config: { companies: parseList(sources.greenhouse) } },
       { type: 'lever', config: { companies: parseList(sources.lever) } },
       {
@@ -366,7 +387,11 @@ export default function Settings() {
         config: { country: sources.adzunaCountry.trim() || 'pt', what: sources.adzunaQuery.trim() },
       },
       { type: 'itjobs', config: { query: sources.itjobsQuery.trim() } },
-    ].map((row) => ({ user_id: userId, enabled: sources.enabled[row.type] ?? true, ...row }));
+    ].map((row) => ({
+      user_id: userId,
+      enabled: sources.enabled[row.type] ?? row.type !== 'linkedin',
+      ...row,
+    }));
     const sourcesResult = await supabase
       .from('jm_sources')
       .upsert(rows, { onConflict: 'user_id,type' });
@@ -632,12 +657,58 @@ export default function Settings() {
                   </Label>
                   <Switch
                     id={`source-${type}`}
-                    checked={sources.enabled[type] ?? true}
+                    checked={sources.enabled[type] ?? type !== 'linkedin'}
                     onCheckedChange={(value) => toggleSource(type, value)}
                   />
                 </div>
               ))}
             </div>
+            {sources.enabled.linkedin && (
+              <div className="space-y-4 rounded-lg border border-warning/40 bg-warning/5 p-4">
+                <div className="flex gap-2 text-sm">
+                  <TriangleAlert
+                    className="mt-0.5 size-4 shrink-0 text-warning"
+                    aria-hidden="true"
+                  />
+                  <p className="text-muted-foreground">{t('settings.linkedinWarning')}</p>
+                </div>
+                <FormField
+                  label={t('settings.linkedinSearches')}
+                  description={t('settings.linkedinSearchesHint')}
+                >
+                  <Textarea
+                    rows={3}
+                    value={sources.linkedinSearches}
+                    placeholder={'full stack\nreact developer'}
+                    onChange={(e) =>
+                      setSources((s) => ({ ...s, linkedinSearches: e.target.value }))
+                    }
+                  />
+                </FormField>
+                <div className="grid gap-4 sm:grid-cols-2 sm:items-end">
+                  <FormField label={t('settings.linkedinLocation')}>
+                    <Input
+                      value={sources.linkedinLocation}
+                      onChange={(e) =>
+                        setSources((s) => ({ ...s, linkedinLocation: e.target.value }))
+                      }
+                    />
+                  </FormField>
+                  <div className="flex h-9 items-center justify-between gap-2 rounded-md border bg-background px-3">
+                    <Label htmlFor="linkedin-remote" className="font-normal">
+                      {t('settings.linkedinRemoteOnly')}
+                    </Label>
+                    <Switch
+                      id="linkedin-remote"
+                      checked={sources.linkedinRemoteOnly}
+                      onCheckedChange={(value) =>
+                        setSources((s) => ({ ...s, linkedinRemoteOnly: value }))
+                      }
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="grid gap-5 sm:grid-cols-2">
               <FormField
                 label={t('settings.netempregosCategories')}

@@ -318,6 +318,7 @@ export const ptBR = {
       arbeitnow: 'Arbeitnow',
       remoteok: 'RemoteOK',
       netempregos: 'Net-Empregos',
+      linkedin: 'LinkedIn',
       greenhouse: 'Greenhouse',
       lever: 'Lever',
       adzuna: 'Adzuna',
@@ -344,6 +345,13 @@ export const ptBR = {
     concurrency: 'Chamadas em paralelo ao LLM',
     sourcesTitle: 'Fontes de vagas',
     sourcesHint: 'Remotive, Arbeitnow, RemoteOK e Net-Empregos estão ativas por defeito.',
+    linkedinWarning:
+      'Usa a pesquisa pública de vagas do LinkedIn, sem a tua conta. Os termos do LinkedIn não permitem acesso automatizado e, se ele bloquear os pedidos, esta fonte deixa de trazer vagas temporariamente. As outras fontes continuam a funcionar.',
+    linkedinSearches: 'Pesquisas no LinkedIn (uma por linha, máx. 3)',
+    linkedinSearchesHint:
+      'Ex.: full stack, react developer. Cada pesquisa traz até 20 vagas da última semana.',
+    linkedinLocation: 'Localização',
+    linkedinRemoteOnly: 'Só remotas',
     netempregosCategories: 'Categorias Net-Empregos (uma por linha, vazio = todas)',
     netempregosHint:
       'Ex.: Informática, Marketing, Engenharia. Compara com a categoria de cada oferta.',

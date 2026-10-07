@@ -40,6 +40,7 @@ const SOURCES = [
   'arbeitnow',
   'remoteok',
   'netempregos',
+  'linkedin',
   'greenhouse',
   'lever',
   'adzuna',

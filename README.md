@@ -82,7 +82,8 @@ The worker falls back to `LLM_API_KEY` when no key is saved in the database (use
 - **Gemini free tier may use submitted data to improve Google's models.** Do not send anything you consider confidential. Use a paid key, Groq, OpenRouter or a local Ollama if that matters to you.
 - CV sanitization (email, phone, address) is heuristic and does not guarantee that all personal data is removed.
 - **Web Push** is free and works in Chrome, Edge, Firefox and Safari. Notifications are per device and stop if the browser revokes the subscription; expired subscriptions are removed automatically.
-- **LinkedIn and Indeed are not supported**: neither offers a free public jobs API (Indeed retired its RSS feeds) and both forbid scraping in their terms of service.
+- **LinkedIn** is an optional source, off by default. It reads LinkedIn's public, logged-out job search (up to 3 searches, 20 results each, with pauses between requests). LinkedIn's terms do not allow automated access, so enable it at your own discretion; if LinkedIn blocks the requests, the source stops returning jobs and the rest of the pipeline keeps working.
+- **Indeed is not supported**: it has no public jobs API, its RSS feeds were retired and its pages are protected by anti-bot challenges.
 - **Job sources**: Remotive asks clients to poll sparingly, and RemoteOK requires linking back to the source. Respect each source's terms.
 
 ## License

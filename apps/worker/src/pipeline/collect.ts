@@ -4,6 +4,7 @@ import {
   greenhouseCollector,
   itJobsCollector,
   leverCollector,
+  linkedInCollector,
   netEmpregosCollector,
   remoteOkCollector,
   remotiveCollector,
@@ -59,6 +60,24 @@ export function buildCollectTasks(
   if (isEnabled('netempregos')) {
     const categories = stringList(configOf('netempregos').categories);
     tasks.push({ id: 'netempregos', run: (f) => netEmpregosCollector.collect({ categories }, f) });
+  }
+  if (byType.get('linkedin')?.enabled === true) {
+    const config = configOf('linkedin');
+    const searches = stringList(config.searches);
+    if (searches.length > 0) {
+      tasks.push({
+        id: 'linkedin',
+        run: (f) =>
+          linkedInCollector.collect(
+            {
+              searches,
+              location: text(config.location),
+              remoteOnly: config.remoteOnly === true,
+            },
+            f,
+          ),
+      });
+    }
   }
   if (isEnabled('remoteok')) {
     tasks.push({ id: 'remoteok', run: (f) => remoteOkCollector.collect({}, f) });

@@ -205,3 +205,11 @@ export const netEmpregosCollector: Collector<NetEmpregosConfig> = {
     }
   },
 };
+
+export {
+  linkedInCollector,
+  normalizeLinkedIn,
+  parseLinkedInDetail,
+  parseLinkedInSearch,
+} from './linkedin';
+export type { LinkedInConfig } from './linkedin';

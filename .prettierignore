@@ -3,3 +3,4 @@ dist
 coverage
 pnpm-lock.yaml
 supabase/functions/_shared/core.js
+packages/core/src/__fixtures__
