@@ -11,6 +11,17 @@
   --color-ink: #0f110c;
   --color-ink-soft: #1b1e17;
   --color-coral: #ff6b5b;
+  --color-slate-50: #f8f9f6;
+  --color-slate-100: #f1f3ee;
+  --color-slate-200: #e3e6dd;
+  --color-slate-300: #cdd2c4;
+  --color-slate-400: #9aa190;
+  --color-slate-500: #6b7262;
+  --color-slate-600: #4e5447;
+  --color-slate-700: #3a3f34;
+  --color-slate-800: #262a21;
+  --color-slate-900: #1b1e17;
+  --color-slate-950: #0f110c;
 }
 
 @theme inline {
@@ -70,6 +81,22 @@
 }
 
 :root,
+[data-palette='lime'] {
+  --brand-50: #f8fee6;
+  --brand-100: #effccc;
+  --brand-200: #e2f99a;
+  --brand-300: #ddff4c;
+  --brand-400: #b5e61d;
+  --brand-500: #84b814;
+  --brand-600: #4f7a0c;
+  --brand-700: #3f6212;
+  --brand-800: #365314;
+  --brand-900: #2c4310;
+  --brand-950: #172405;
+  --deep: #12200a;
+  --highlight: #ddff4c;
+}
+
 [data-palette='ocean'] {
   --brand-50: #eefaff;
   --brand-100: #d9f5fe;
@@ -174,7 +201,7 @@
 
 .dark {
   --background: color-mix(in oklab, var(--brand-950) 30%, oklch(0.16 0 0));
-  --foreground: oklch(0.97 0.004 250);
+  --foreground: oklch(0.97 0.004 120);
   --card: color-mix(in oklab, var(--brand-950) 30%, oklch(0.195 0 0));
   --card-foreground: var(--foreground);
   --popover: color-mix(in oklab, var(--brand-950) 30%, oklch(0.21 0 0));
@@ -184,7 +211,7 @@
   --secondary: color-mix(in oklab, var(--brand-400) 10%, oklch(0.25 0 0));
   --secondary-foreground: var(--foreground);
   --muted: color-mix(in oklab, var(--brand-400) 8%, oklch(0.24 0 0));
-  --muted-foreground: oklch(0.72 0.01 250);
+  --muted-foreground: oklch(0.72 0.01 120);
   --accent: color-mix(in oklab, var(--brand-400) 14%, oklch(0.25 0 0));
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.68 0.19 25);
