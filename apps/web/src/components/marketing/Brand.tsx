@@ -11,10 +11,12 @@ const MARK_SIZES = {
 export function BrandMark({
   size = 'md',
   inverted = false,
+  accent = false,
   className,
 }: {
   size?: keyof typeof MARK_SIZES;
   inverted?: boolean;
+  accent?: boolean;
   className?: string;
 }) {
   const style = MARK_SIZES[size];
@@ -23,7 +25,13 @@ export function BrandMark({
       className={cn(
         'flex shrink-0 items-center justify-center',
         style.box,
-        inverted ? 'bg-white/10 text-white ring-1 ring-white/20' : 'bg-brand-600 text-white',
+        accent
+          ? inverted
+            ? 'bg-volt text-ink'
+            : 'bg-ink text-volt dark:bg-volt dark:text-ink'
+          : inverted
+            ? 'bg-white/10 text-white ring-1 ring-white/20'
+            : 'bg-brand-600 text-white',
         className,
       )}
       aria-hidden="true"
@@ -35,11 +43,29 @@ export function BrandMark({
 
 export function Wordmark({
   inverted = false,
+  accent = false,
   className,
 }: {
   inverted?: boolean;
+  accent?: boolean;
   className?: string;
 }) {
+  if (accent) {
+    return (
+      <span
+        className={cn(
+          'font-display text-lg font-semibold tracking-tight',
+          inverted ? 'text-white' : 'text-foreground',
+          className,
+        )}
+      >
+        JobMatch{' '}
+        <span className={cn('rounded-md px-1', inverted ? 'text-volt' : 'bg-volt text-ink')}>
+          AI
+        </span>
+      </span>
+    );
+  }
   return (
     <span
       className={cn(
@@ -59,17 +85,23 @@ export function Wordmark({
 
 export function Brand({
   inverted = false,
+  accent = false,
   to = '/',
   size = 'md',
 }: {
   inverted?: boolean;
+  accent?: boolean;
   to?: string;
   size?: 'sm' | 'md';
 }) {
   return (
     <Link to={to} className="inline-flex items-center gap-2.5 rounded-lg" aria-label="JobMatch AI">
-      <BrandMark size={size} inverted={inverted} />
-      <Wordmark inverted={inverted} className={size === 'sm' ? 'text-base' : undefined} />
+      <BrandMark size={size} inverted={inverted} accent={accent} />
+      <Wordmark
+        inverted={inverted}
+        accent={accent}
+        className={size === 'sm' ? 'text-base' : undefined}
+      />
     </Link>
   );
 }

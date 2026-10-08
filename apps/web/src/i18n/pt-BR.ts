@@ -307,6 +307,44 @@ export const ptBR = {
     readme: 'Ler o README',
     footer: 'Projeto open source, feito para quem procura emprego.',
     illustrative: 'Pré-visualização ilustrativa',
+    howLink: 'Ver como funciona',
+    readMore: 'Saber mais',
+    mostTitle: 'Tira o máximo de cada vaga',
+    cards: [
+      {
+        title: 'Score de 0 a 100',
+        text: 'A IA compara cada vaga com o teu CV, explica os motivos e mostra as skills que faltam.',
+      },
+      {
+        title: 'Avisos no momento certo',
+        text: 'Notificações push no telemóvel ou no computador quando surge uma vaga acima do teu score mínimo.',
+      },
+    ],
+    pulseTitle: 'Recebe só as vagas que valem a pena',
+    pulseText:
+      'Um worker recolhe vagas a cada duas horas, aplica as tuas regras e só te avisa quando o match compensa.',
+    statTitle: '8 fontes, a cada 2 horas',
+    statText:
+      'Quadros de vagas remotas, ATS como Greenhouse e Lever e portais portugueses. Tu defines as regras, o worker faz o resto.',
+    finalTitle: 'Começa grátis e deixa as vagas virem ter contigo',
+    finalText:
+      'Cria conta e configura o teu perfil, ou faz fork e corre a tua própria instância no Supabase.',
+    footerCols: { product: 'Produto', account: 'Conta' },
+    showcase: {
+      phoneTitle: 'Matches de hoje',
+      filters: ['Remoto', 'Sénior', 'TypeScript'],
+      discard: 'Descartar',
+      save: 'Guardar',
+      notification: 'Novo match',
+      notificationMeta: 'agora',
+      analysisLabel: 'Análise da IA',
+      have: 'Já tens',
+      missing: 'Em falta',
+      skillsHave: ['React', 'TypeScript', 'Node.js'],
+      skillsMissing: ['GraphQL'],
+      coverLetter: 'Gerar carta',
+      rules: ['Remoto', 'Sénior', 'Excluir: PHP'],
+    },
   },
   verify: {
     loginTitle: 'Introduz o código',
