@@ -399,7 +399,7 @@ export default function JobDetail() {
           return (
             <Card className="flex-row flex-wrap items-center justify-between gap-3 p-5">
               <div className="flex items-start gap-3">
-                <ListChecks className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden="true" />
+                <ListChecks className="mt-0.5 size-5 shrink-0 text-brand-600 dark:text-primary" aria-hidden="true" />
                 <div>
                   <p className="text-sm font-medium">{t('jobs.detailsMissing')}</p>
                   <p className="text-xs text-muted-foreground">{t('jobs.detailsMissingHint')}</p>
@@ -422,7 +422,7 @@ export default function JobDetail() {
             <Card className="gap-0 py-0">
               <CardHeader className="border-b py-5">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <ListChecks className="size-4 text-primary" aria-hidden="true" />
+                  <ListChecks className="size-4 text-brand-600 dark:text-primary" aria-hidden="true" />
                   {t('jobs.requirementsTitle')}
                 </CardTitle>
               </CardHeader>
@@ -438,7 +438,7 @@ export default function JobDetail() {
                       {required.map((item) => (
                         <li key={item} className="flex gap-2">
                           <Check
-                            className="mt-0.5 size-4 shrink-0 text-primary"
+                            className="mt-0.5 size-4 shrink-0 text-brand-600 dark:text-primary"
                             aria-hidden="true"
                           />
                           <span>{item}</span>
@@ -470,7 +470,7 @@ export default function JobDetail() {
             <Card className="gap-0 py-0">
               <CardHeader className="border-b py-5">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Gift className="size-4 text-primary" aria-hidden="true" />
+                  <Gift className="size-4 text-brand-600 dark:text-primary" aria-hidden="true" />
                   {t('jobs.offersTitle')}
                 </CardTitle>
               </CardHeader>
@@ -503,7 +503,7 @@ export default function JobDetail() {
         <Card className="gap-0 py-0 lg:col-span-2">
           <CardHeader className="border-b py-5">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="size-4 text-primary" aria-hidden="true" />
+              <Sparkles className="size-4 text-brand-600 dark:text-primary" aria-hidden="true" />
               {t('jobs.analysis')}
             </CardTitle>
           </CardHeader>

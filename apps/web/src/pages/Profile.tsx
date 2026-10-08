@@ -200,7 +200,7 @@ export default function Profile() {
 
   const aiMark = (key: keyof ProfileForm) =>
     aiFilled.has(key) ? (
-      <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+      <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-600 dark:text-primary">
         <Sparkles className="size-3" />
         IA
       </span>

@@ -5,7 +5,7 @@ export function ScoreBadge({ score, className }: { score: number; className?: st
     score >= 80
       ? 'bg-success/10 text-success ring-success/20'
       : score >= 60
-        ? 'bg-primary/10 text-primary ring-primary/20'
+        ? 'bg-primary/10 text-brand-600 dark:text-primary ring-primary/20'
         : 'bg-muted text-muted-foreground ring-border';
   return (
     <span

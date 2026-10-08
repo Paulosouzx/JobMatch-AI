@@ -544,7 +544,7 @@ export default function Settings() {
                       key={model}
                       type="button"
                       onClick={() => set('model', model)}
-                      className={`rounded-md border px-2 py-1 font-mono text-xs transition-colors ${form.model === model ? 'border-primary bg-primary/10 text-primary' : 'hover:bg-accent'}`}
+                      className={`rounded-md border px-2 py-1 font-mono text-xs transition-colors ${form.model === model ? 'border-primary bg-primary/10 text-brand-600 dark:text-primary' : 'hover:bg-accent'}`}
                     >
                       {model}
                     </button>

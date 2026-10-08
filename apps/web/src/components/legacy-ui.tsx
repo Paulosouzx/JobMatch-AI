@@ -12,7 +12,7 @@ const cx = (...parts: (string | false | undefined)[]) => parts.filter(Boolean).j
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-500 focus-visible:outline-brand-600',
+  primary: 'bg-volt text-ink hover:bg-volt/85 focus-visible:outline-brand-600',
   secondary:
     'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800',
   danger: 'bg-red-600 text-white hover:bg-red-500',

@@ -4,7 +4,7 @@ export type StatusTone = 'neutral' | 'primary' | 'success' | 'warning' | 'danger
 
 const TONES: Record<StatusTone, { badge: string; dot: string }> = {
   neutral: { badge: 'bg-muted text-muted-foreground', dot: 'bg-muted-foreground' },
-  primary: { badge: 'bg-primary/10 text-primary', dot: 'bg-primary' },
+  primary: { badge: 'bg-primary/10 text-brand-600 dark:text-primary', dot: 'bg-primary' },
   info: { badge: 'bg-chart-2/10 text-chart-2', dot: 'bg-chart-2' },
   success: { badge: 'bg-success/10 text-success', dot: 'bg-success' },
   warning: { badge: 'bg-warning/15 text-warning', dot: 'bg-warning' },

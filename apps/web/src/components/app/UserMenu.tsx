@@ -33,7 +33,7 @@ export function UserAvatar({
       {identity.avatarUrl && (
         <AvatarImage src={identity.avatarUrl} alt="" referrerPolicy="no-referrer" />
       )}
-      <AvatarFallback className="bg-primary/10 text-xs font-medium text-primary">
+      <AvatarFallback className="bg-primary/10 text-xs font-medium text-brand-600 dark:text-primary">
         {identity.initials}
       </AvatarFallback>
     </Avatar>

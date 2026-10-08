@@ -115,11 +115,11 @@ export function AuthLayout({
         </main>
       </div>
 
-      <aside className="relative hidden overflow-hidden rounded-[2rem] bg-brand-600 lg:flex lg:flex-col lg:items-center lg:justify-center lg:px-12">
-        <div className="absolute -top-16 -left-16 h-56 w-56 rotate-12 rounded-[3rem] border border-white/15" />
-        <div className="absolute top-24 left-24 h-16 w-16 rotate-12 rounded-2xl bg-white/10" />
-        <div className="absolute -right-20 -bottom-20 h-72 w-72 -rotate-12 rounded-[4rem] border border-white/15" />
-        <div className="absolute right-16 bottom-40 h-20 w-20 rotate-45 rounded-3xl bg-white/10" />
+      <aside className="relative hidden overflow-hidden rounded-[2rem] bg-volt lg:flex lg:flex-col lg:items-center lg:justify-center lg:px-12">
+        <div className="absolute -top-16 -left-16 h-56 w-56 rotate-12 rounded-[3rem] border border-ink/10" />
+        <div className="absolute top-24 left-24 h-16 w-16 rotate-12 rounded-2xl bg-ink/5" />
+        <div className="absolute -right-20 -bottom-20 h-72 w-72 -rotate-12 rounded-[4rem] border border-ink/10" />
+        <div className="absolute right-16 bottom-40 h-20 w-20 rotate-45 rounded-3xl bg-ink/5" />
         <div className="relative w-full max-w-lg">
           <DashboardMock />
           <div className="absolute -bottom-12 -left-10">
@@ -131,10 +131,10 @@ export function AuthLayout({
           </div>
         </div>
         <div className="relative mt-24 max-w-md text-center">
-          <p className="font-display text-3xl leading-tight font-semibold text-white">
+          <p className="font-display text-3xl leading-tight font-semibold text-ink">
             {t('auth.panelTitle')}
           </p>
-          <p className="mt-3 text-sm text-brand-100">{t('auth.panelText')}</p>
+          <p className="mt-3 text-sm text-ink/70">{t('auth.panelText')}</p>
         </div>
       </aside>
     </div>

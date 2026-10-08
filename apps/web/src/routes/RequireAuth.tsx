@@ -26,7 +26,7 @@ function AccessDenied({ kind }: { kind: 'denied' | 'error' }) {
           <button
             type="button"
             onClick={() => void signOut()}
-            className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-brand-500"
+            className="inline-flex items-center gap-2 rounded-full bg-volt px-5 py-2.5 text-sm font-medium text-ink hover:bg-volt/85"
           >
             <LogOut className="h-4 w-4" strokeWidth={1.75} />
             {t('nav.logout')}

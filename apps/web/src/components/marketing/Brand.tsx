@@ -31,7 +31,7 @@ export function BrandMark({
             : 'bg-ink text-volt dark:bg-volt dark:text-ink'
           : inverted
             ? 'bg-white/10 text-white ring-1 ring-white/20'
-            : 'bg-brand-600 text-white',
+            : 'bg-volt text-ink',
         className,
       )}
       aria-hidden="true"
@@ -74,11 +74,8 @@ export function Wordmark({
         className,
       )}
     >
-      JobMatch
-      <span className={inverted ? 'text-brand-300' : 'text-brand-600 dark:text-brand-400'}>
-        {' '}
-        AI
-      </span>
+      JobMatch{' '}
+      <span className={inverted ? 'text-volt' : 'rounded-md bg-volt px-1 text-ink'}>AI</span>
     </span>
   );
 }
