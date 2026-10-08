@@ -95,7 +95,11 @@ export function Brand({
   size?: 'sm' | 'md';
 }) {
   return (
-    <Link to={to} className="inline-flex items-center gap-2.5 rounded-lg" aria-label="JobMatch AI">
+    <Link
+      to={to}
+      className="inline-flex items-center gap-2.5 rounded-lg whitespace-nowrap"
+      aria-label="JobMatch AI"
+    >
       <BrandMark size={size} inverted={inverted} accent={accent} />
       <Wordmark
         inverted={inverted}

@@ -212,6 +212,7 @@ export const ptBR = {
     signup: 'Criar conta',
     start: 'Começar agora',
     dashboard: 'Ir para o dashboard',
+    dashboardShort: 'Dashboard',
     sourcesStat: '8 fontes',
     sourcesStatText: 'de vagas analisadas',
     mock: {

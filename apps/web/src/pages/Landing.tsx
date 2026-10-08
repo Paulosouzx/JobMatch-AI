@@ -7,6 +7,7 @@ import {
   Funnel,
   GitFork,
   KeyRound,
+  LayoutDashboard,
   Plus,
   Search,
   ShieldCheck,
@@ -115,8 +116,15 @@ export default function Landing() {
   return (
     <div className="min-h-screen overflow-x-clip bg-white text-ink dark:bg-ink dark:text-white">
       <header className="sticky top-0 z-30 bg-white/85 backdrop-blur dark:bg-ink/85">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Brand accent />
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:gap-4 sm:px-6">
+          <div className="min-w-0 shrink">
+            <span className="sm:hidden">
+              <Brand accent size="sm" />
+            </span>
+            <span className="hidden sm:inline-flex">
+              <Brand accent />
+            </span>
+          </div>
           <nav className="hidden items-center gap-8 text-sm text-slate-600 md:flex dark:text-slate-300">
             {navLinks.map((link) => (
               <a
@@ -128,8 +136,10 @@ export default function Landing() {
               </a>
             ))}
           </nav>
-          <div className="flex items-center gap-2">
-            <ThemeToggle dark={dark} onToggle={toggle} label={t('common.theme')} />
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="max-[359px]:hidden">
+              <ThemeToggle dark={dark} onToggle={toggle} label={t('common.theme')} />
+            </span>
             {!session && (
               <Link
                 to="/login"
@@ -138,8 +148,19 @@ export default function Landing() {
                 {t('landing.login')}
               </Link>
             )}
-            <Link to={session ? '/app' : '/signup'} className={`${btnInk} py-2`}>
-              {session ? t('landing.dashboard') : t('landing.signup')}
+            <Link
+              to={session ? '/app' : '/signup'}
+              className={`${btnInk} py-2 whitespace-nowrap max-sm:px-4`}
+            >
+              {session ? (
+                <>
+                  <LayoutDashboard className="size-4" strokeWidth={2} aria-hidden="true" />
+                  <span className="sm:hidden">{t('landing.dashboardShort')}</span>
+                  <span className="hidden sm:inline">{t('landing.dashboard')}</span>
+                </>
+              ) : (
+                t('landing.signup')
+              )}
             </Link>
           </div>
         </div>
